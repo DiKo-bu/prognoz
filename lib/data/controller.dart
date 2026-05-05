@@ -88,10 +88,16 @@ class ProjectController extends ChangeNotifier {
     loadData();
   }
 
+  // ИЗМЕНЁННЫЙ МЕТОД: сбрасываем график при добавлении нового этапа
   void addTask() {
     String newId = (tasks.length + 1).toString();
     tasks.add(SimulationTask(id: newId, name: 'Новый этап $newId'));
     saveData();
+    // Очистка всех результатов моделирования
+    resultText = '';
+    ganttData = {};
+    p90Duration = 0;
+    topRisks = [];
     notifyListeners();
   }
 
@@ -100,6 +106,7 @@ class ProjectController extends ChangeNotifier {
     for (int i = 0; i < tasks.length; i++)
       tasks[i].id = (i + 1).toString();
     saveData();
+    // тоже можно сбросить, но пока не трогаем
     notifyListeners();
   }
 

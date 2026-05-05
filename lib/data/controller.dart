@@ -131,6 +131,12 @@ class ProjectController extends ChangeNotifier {
     saveData();
   }
 
+  void updateTaskWorkType(int index, String type) {
+    tasks[index].workType = type;
+    saveData();
+    notifyListeners();
+  }
+
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -138,7 +144,6 @@ class ProjectController extends ChangeNotifier {
 
       for (int i = 0; i < tasks.length; i++) {
         String taskId = tasks[i].id;
-        // Пытаемся найти по id или по имени, т.к. лесник может передать по title
         if (incomingData.containsKey(taskId) || incomingData.containsKey(tasks[i].name)) {
           var taskUpdate = incomingData[taskId] ?? incomingData[tasks[i].name];
           if (taskUpdate.containsKey('completed')) tasks[i].isCompleted = taskUpdate['completed'];
@@ -159,17 +164,16 @@ class ProjectController extends ChangeNotifier {
     }
   }
 
-  // НОВЫЙ МЕТОД: экспорт плана в JSON
   String exportPlanToJson() {
     final plan = tasks.map((t) => {
-          'id': t.id,
-          'name': t.name,
-          'min': t.min,
-          'likely': t.likely,
-          'max': t.max,
-          'dependsOn': t.dependsOn,
-          // Пока без типа работы – в будущем можно расширить
-        }).toList();
+      'id': t.id,
+      'name': t.name,
+      'min': t.min,
+      'likely': t.likely,
+      'max': t.max,
+      'dependsOn': t.dependsOn,
+      'workType': t.workType,
+    }).toList();
     return jsonEncode(plan);
   }
 

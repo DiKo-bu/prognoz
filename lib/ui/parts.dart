@@ -7,28 +7,39 @@ class TaskInputCard extends StatelessWidget {
   final String title;
   final double currentMin, currentLikely, currentMax;
   final String currentDepends;
-  
-  // Новые переменные
   final bool isCompleted;
   final double actualDuration;
+  final String workType;
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
-
   final Function(String) onTitleChange;
   final Function(String, double) onUpdate;
   final Function(String) onDependsChange;
+  final Function(String) onWorkTypeChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
-    super.key, required this.id, required this.title, 
-    required this.currentMin, required this.currentLikely, required this.currentMax, required this.currentDepends,
-    required this.isCompleted, required this.actualDuration, required this.onCompletionChange, required this.onActualChange,
-    required this.onTitleChange, required this.onUpdate, required this.onDependsChange, required this.onDelete
+    super.key,
+    required this.id,
+    required this.title,
+    required this.currentMin,
+    required this.currentLikely,
+    required this.currentMax,
+    required this.currentDepends,
+    required this.isCompleted,
+    required this.actualDuration,
+    required this.workType,
+    required this.onCompletionChange,
+    required this.onActualChange,
+    required this.onTitleChange,
+    required this.onUpdate,
+    required this.onDependsChange,
+    required this.onWorkTypeChange,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Валидация ошибки отключается, если задача уже завершена
     bool isInvalid = !isCompleted && ((currentMin > currentLikely) || (currentLikely > currentMax));
     bool notEmpty = currentMin != 0 || currentLikely != 0 || currentMax != 0;
     bool showError = isInvalid && notEmpty;
@@ -36,7 +47,11 @@ class TaskInputCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 2,
-      shape: showError ? RoundedRectangleBorder(side: const BorderSide(color: Colors.red, width: 2), borderRadius: BorderRadius.circular(4)) : null,
+      shape: showError
+          ? RoundedRectangleBorder(
+              side: const BorderSide(color: Colors.red, width: 2),
+              borderRadius: BorderRadius.circular(4))
+          : null,
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(
@@ -45,23 +60,32 @@ class TaskInputCard extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: isCompleted ? Colors.green : (showError ? Colors.red : Colors.blue[700]), borderRadius: BorderRadius.circular(4)),
+                  decoration: BoxDecoration(
+                      color: isCompleted
+                          ? Colors.green
+                          : (showError ? Colors.red : Colors.blue[700]),
+                      borderRadius: BorderRadius.circular(4)),
                   child: Text(id, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: TextFormField(
                     initialValue: title,
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, decoration: isCompleted ? TextDecoration.lineThrough : null),
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                        decoration: isCompleted ? TextDecoration.lineThrough : null),
                     decoration: const InputDecoration(border: InputBorder.none, isDense: true),
                     onChanged: onTitleChange,
                   ),
                 ),
-                IconButton(icon: const Icon(Icons.close, color: Colors.redAccent, size: 20), onPressed: onDelete, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                IconButton(
+                    icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
+                    onPressed: onDelete,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints()),
               ],
             ),
-            
-            // НОВЫЙ БЛОК: ТРЕКИНГ ФАКТА
             Row(
               children: [
                 Checkbox(value: isCompleted, activeColor: Colors.green, onChanged: (v) => onCompletionChange(v ?? false)),
@@ -73,8 +97,20 @@ class TaskInputCard extends StatelessWidget {
                 ]
               ],
             ),
-
-            // БЛОК ПЛАНА (затеняется и блокируется, если задача выполнена)
+            // Выбор типа работы
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: DropdownButtonFormField<String>(
+                value: workType,
+                decoration: const InputDecoration(labelText: 'Тип работы', isDense: true),
+                items: ['Обход', 'Подготовка почвы', 'Посадка', 'Вырубка', 'Охрана']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (v) {
+                  if (v != null) onWorkTypeChange(v);
+                },
+              ),
+            ),
             IgnorePointer(
               ignoring: isCompleted,
               child: Opacity(
@@ -89,16 +125,20 @@ class TaskInputCard extends StatelessWidget {
                 ),
               ),
             ),
-            
             if (showError)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
-                child: Text("Ошибка: должно быть Мин <= Норма <= Макс", style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                child: Text("Ошибка: должно быть Мин <= Норма <= Макс",
+                    style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             const SizedBox(height: 8),
             TextFormField(
               initialValue: currentDepends,
-              decoration: const InputDecoration(labelText: 'После этапов (номера через запятую)', isDense: true, border: OutlineInputBorder(), labelStyle: TextStyle(fontSize: 11)),
+              decoration: const InputDecoration(
+                  labelText: 'После этапов (номера через запятую)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                  labelStyle: TextStyle(fontSize: 11)),
               style: const TextStyle(fontSize: 13),
               onChanged: onDependsChange,
             ),
@@ -126,14 +166,16 @@ class TaskInputCard extends StatelessWidget {
 class GanttChart extends StatelessWidget {
   final Map<String, GanttTaskData> data;
   final double totalDuration;
-  final DateTime startDate; 
+  final DateTime startDate;
   const GanttChart({super.key, required this.data, required this.totalDuration, required this.startDate});
 
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty || totalDuration == 0) return const SizedBox();
     return Container(
-      height: (data.length * 35.0) + 30.0, width: double.infinity, padding: const EdgeInsets.all(5),
+      height: (data.length * 35.0) + 30.0,
+      width: double.infinity,
+      padding: const EdgeInsets.all(5),
       decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(5)),
       child: CustomPaint(painter: GanttPainter(data: data, totalDuration: totalDuration, startDate: startDate)),
     );
@@ -150,8 +192,8 @@ class GanttPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (totalDuration <= 0) return;
     final textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
-    double pxPerUnit = (size.width - 30.0) / totalDuration; 
-    
+    double pxPerUnit = (size.width - 30.0) / totalDuration;
+
     int index = 0;
     for (int t = 0; t <= totalDuration.toInt(); t += (totalDuration / 5).ceil()) {
       double x = 30.0 + (t * pxPerUnit);
@@ -166,11 +208,13 @@ class GanttPainter extends CustomPainter {
     for (var taskId in data.keys) {
       final task = data[taskId]!;
       double y = (index * 35.0) + 5;
-      
-      // КРАСИМ В ЗЕЛЕНЫЙ, ЕСЛИ ЗАВЕРШЕНО
-      final paintBar = Paint()..color = task.isCompleted ? Colors.green[400]! : Colors.blue[300]!..style = PaintingStyle.fill;
-      
-      textPainter.text = TextSpan(text: taskId, style: TextStyle(fontWeight: FontWeight.bold, color: task.isCompleted ? Colors.green : Colors.blue));
+      final paintBar = Paint()
+        ..color = task.isCompleted ? Colors.green[400]! : Colors.blue[300]!
+        ..style = PaintingStyle.fill;
+
+      textPainter.text = TextSpan(
+          text: taskId,
+          style: TextStyle(fontWeight: FontWeight.bold, color: task.isCompleted ? Colors.green : Colors.blue));
       textPainter.layout();
       textPainter.paint(canvas, Offset(5, y + 8));
 
@@ -188,5 +232,6 @@ class GanttPainter extends CustomPainter {
       index++;
     }
   }
-  @override bool shouldRepaint(covariant GanttPainter oldDelegate) => true;
+  @override
+  bool shouldRepaint(covariant GanttPainter oldDelegate) => true;
 }

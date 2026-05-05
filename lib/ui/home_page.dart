@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';              // НОВОЕ (для Clipboard)
+import 'package:flutter/services.dart';
 import '../data/controller.dart';
 import 'parts.dart';
 import 'widgets/project_drawer.dart';
@@ -54,7 +54,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // НОВЫЙ МЕТОД: экспорт плана в буфер
   void _exportPlan() {
     final jsonStr = _controller.exportPlanToJson();
     Clipboard.setData(ClipboardData(text: jsonStr));
@@ -79,13 +78,11 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: Text(_controller.currentProject, style: const TextStyle(fontSize: 18)),
             actions: [
-              // КНОПКА ЭКСПОРТА ПЛАНА
               IconButton(
                 icon: const Icon(Icons.upload_file),
                 tooltip: 'Экспорт плана',
                 onPressed: _exportPlan,
               ),
-              // КНОПКА ИМПОРТА ОТЧЁТА
               IconButton(
                 icon: const Icon(Icons.download_for_offline),
                 color: Colors.green,
@@ -149,11 +146,13 @@ class _HomePageState extends State<HomePage> {
                               currentDepends: task.dependsOn.join(', '),
                               isCompleted: task.isCompleted,
                               actualDuration: task.actualDuration,
+                              workType: task.workType,
                               onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
                               onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
                               onTitleChange: (v) => _controller.updateTaskTitle(i, v),
                               onUpdate: (key, val) => _controller.updateTaskValues(i, key, val),
                               onDependsChange: (val) => _controller.updateTaskDepends(i, val),
+                              onWorkTypeChange: (v) => _controller.updateTaskWorkType(i, v),
                               onDelete: () => _controller.removeTask(i),
                             );
                           },

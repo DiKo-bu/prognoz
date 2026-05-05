@@ -14,7 +14,6 @@ class BaselinePlan {
   BaselinePlan({required this.taskData, required this.totalDuration});
 }
 
-// НОВЫЙ КЛАСС: Для хранения результатов Торнадо-анализа
 class RiskImpact {
   final String taskName;
   final double impactDays;
@@ -26,35 +25,49 @@ class SimulationTask {
   String name;
   double min, likely, max;
   List<String> dependsOn;
-  bool isCompleted; 
-  double actualDuration; 
+  bool isCompleted;
+  double actualDuration;
+  String workType;   // <-- новое поле
 
   SimulationTask({
-    required this.id, required this.name,
-    this.min = 0, this.likely = 0, this.max = 0,
+    required this.id,
+    required this.name,
+    this.min = 0,
+    this.likely = 0,
+    this.max = 0,
     this.dependsOn = const [],
     this.isCompleted = false,
     this.actualDuration = 0,
+    this.workType = 'Обход',   // <-- добавлено в конструктор
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id, 'name': name, 'min': min, 'likely': likely, 'max': max, 'dependsOn': dependsOn,
-    'isCompleted': isCompleted, 'actualDuration': actualDuration
+    'id': id,
+    'name': name,
+    'min': min,
+    'likely': likely,
+    'max': max,
+    'dependsOn': dependsOn,
+    'isCompleted': isCompleted,
+    'actualDuration': actualDuration,
+    'workType': workType,   // <-- добавлено
   };
 
   factory SimulationTask.fromMap(Map<dynamic, dynamic> map) => SimulationTask(
-    id: map['id'], name: map['name'],
+    id: map['id'],
+    name: map['name'],
     min: (map['min'] ?? 0).toDouble(),
     likely: (map['likely'] ?? 0).toDouble(),
     max: (map['max'] ?? 0).toDouble(),
     dependsOn: List<String>.from(map['dependsOn'] ?? []),
     isCompleted: map['isCompleted'] ?? false,
     actualDuration: (map['actualDuration'] ?? 0).toDouble(),
+    workType: map['workType'] ?? 'Обход',   // <-- добавлено
   );
 
   double getSample(Random rnd) {
-    if (isCompleted) return actualDuration; 
-    if (max <= min) return min; 
+    if (isCompleted) return actualDuration;
+    if (max <= min) return min;
     double r = rnd.nextDouble();
     if (r < (likely - min) / (max - min)) {
       return min + sqrt(r * (max - min) * (likely - min));
@@ -91,7 +104,9 @@ class MonteCarloEngine {
         return endTime;
       }
 
-      for (var task in tasks) { maxProjectTime = max(maxProjectTime, resolveTask(task, <String>{})); }
+      for (var task in tasks) {
+        maxProjectTime = max(maxProjectTime, resolveTask(task, <String>{}));
+      }
       results.add(maxProjectTime);
     }
     results.sort();
@@ -122,15 +137,15 @@ class MonteCarloEngine {
       return endTime;
     }
 
-    for (var task in tasks) { totalDuration = max(totalDuration, resolveTask(task, <String>{})); }
+    for (var task in tasks) {
+      totalDuration = max(totalDuration, resolveTask(task, <String>{}));
+    }
     return BaselinePlan(taskData: taskData, totalDuration: totalDuration);
   }
 
-  // НОВЫЙ АЛГОРИТМ: Вычисление самых опасных задач
   static List<RiskImpact> calculateRisks(List<SimulationTask> tasks) {
     if (tasks.isEmpty) return [];
 
-    // Внутренняя функция для просчета проекта с заданными параметрами
     double calcWithOverrides(Map<String, double> overrides) {
       Map<String, double> endTimes = {};
       double maxTime = 0;
@@ -146,8 +161,6 @@ class MonteCarloEngine {
           } catch(e) {}
         }
         stack.remove(task.id);
-        
-        // Берем значение: факт (если завершено), либо переопределенное (для стресс-теста), либо норму
         double duration = task.isCompleted ? task.actualDuration : (overrides.containsKey(task.id) ? overrides[task.id]! : task.likely);
         double endTime = startTime + duration;
         endTimes[task.id] = endTime;
@@ -157,23 +170,19 @@ class MonteCarloEngine {
       return maxTime;
     }
 
-    double baselineDuration = calcWithOverrides({}); // Идеальный сценарий
+    double baselineDuration = calcWithOverrides({});
     List<RiskImpact> risks = [];
 
     for (var task in tasks) {
       if (task.isCompleted || task.max <= task.likely) continue;
-      
-      // Имитируем катастрофу только на одном этапе
       double worstCaseDuration = calcWithOverrides({task.id: task.max});
       double impact = worstCaseDuration - baselineDuration;
-
-      // Если задержка этапа сдвинула весь проект, это критический риск
       if (impact > 0.1) {
         risks.add(RiskImpact(taskName: task.name, impactDays: impact));
       }
     }
 
     risks.sort((a, b) => b.impactDays.compareTo(a.impactDays));
-    return risks.take(3).toList(); // Отдаем Топ-3
+    return risks.take(3).toList();
   }
 }

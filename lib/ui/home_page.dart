@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/controller.dart';
 import 'parts.dart';
-import 'widgets/project_drawer.dart';
+import 'widgets/executor_drawer.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,7 +11,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final ProjectController _controller = ProjectController();
+  final ExecutorController _controller = ExecutorController();
 
   @override
   void initState() {
@@ -70,13 +70,42 @@ class _HomePageState extends State<HomePage> {
         if (!_controller.isInitialized)
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
+        // Если нет текущего исполнителя
+        if (_controller.currentExecutor.isEmpty) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('Лесной Прогноз'),
+            ),
+            drawer: ExecutorDrawer(controller: _controller),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Нет выбранного исполнителя.',
+                      style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.person_add),
+                    label: const Text('Создать исполнителя'),
+                    onPressed: () {
+                      _controller.createNewExecutor(''); // временно, чтобы открыть меню? Нет, лучше через диалог
+                      // Покажем диалог добавления
+                      _showAddExecutorFromHome();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         String startDay = _controller.startDate.day.toString().padLeft(2, '0');
         String startMonth = _controller.startDate.month.toString().padLeft(2, '0');
         String startYear = _controller.startDate.year.toString();
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(_controller.currentProject, style: const TextStyle(fontSize: 18)),
+            title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
             actions: [
               IconButton(
                 icon: const Icon(Icons.upload_file),
@@ -94,7 +123,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ],
           ),
-          drawer: ProjectDrawer(controller: _controller),
+          drawer: ExecutorDrawer(controller: _controller),
           body: Padding(
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
             child: Column(
@@ -251,6 +280,32 @@ class _HomePageState extends State<HomePage> {
           ),
         );
       },
+    );
+  }
+
+  void _showAddExecutorFromHome() {
+    // Откроем боковое меню программно или вызовем диалог, как в drawer
+    // Проще открыть drawer, но мы можем показать диалог напрямую
+    TextEditingController textCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Новый исполнитель'),
+        content: TextField(
+          controller: textCtrl,
+          decoration: const InputDecoration(hintText: 'ФИО исполнителя'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ОТМЕНА')),
+          ElevatedButton(
+            onPressed: () {
+              _controller.createNewExecutor(textCtrl.text);
+              Navigator.pop(ctx);
+            },
+            child: const Text('СОЗДАТЬ'),
+          ),
+        ],
+      ),
     );
   }
 }

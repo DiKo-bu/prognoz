@@ -3,36 +3,29 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 import '../logic/engine.dart';
 
-class ProjectController extends ChangeNotifier {
+class ExecutorController extends ChangeNotifier {
   late Box _box;
   List<SimulationTask> tasks = [];
-  List<String> projects = [];
-  String currentProject = '';
+  List<String> executors = [];
+  String currentExecutor = '';
 
   String resultText = '';
   Map<String, GanttTaskData> ganttData = {};
   double p90Duration = 0;
   DateTime startDate = DateTime.now();
-
   List<RiskImpact> topRisks = [];
-
   bool isInitialized = false;
 
   Future<void> init() async {
     _box = Hive.box('prognoz_box');
-    var storedProjects = _box.get('projects_list');
-    if (storedProjects != null) {
-      projects = List<String>.from(storedProjects);
-      currentProject = projects.first;
+    var storedExecutors = _box.get('executors_list');
+    if (storedExecutors != null) {
+      executors = List<String>.from(storedExecutors);
+      currentExecutor = executors.isNotEmpty ? executors.first : '';
     } else {
-      projects = ['Основной проект'];
-      currentProject = 'Основной проект';
-      _box.put('projects_list', projects);
-      var oldTasks = _box.get('tasks');
-      if (oldTasks != null) {
-        _box.put('proj_Основной проект', oldTasks);
-        _box.delete('tasks');
-      }
+      executors = [];
+      currentExecutor = '';
+      _box.put('executors_list', executors);
     }
     loadData();
     isInitialized = true;
@@ -40,13 +33,22 @@ class ProjectController extends ChangeNotifier {
   }
 
   void loadData() {
-    final stored = _box.get('proj_$currentProject');
+    if (currentExecutor.isEmpty) {
+      tasks = [];
+      resultText = '';
+      ganttData = {};
+      topRisks = [];
+      startDate = DateTime.now();
+      notifyListeners();
+      return;
+    }
+    final stored = _box.get('exec_$currentExecutor');
     if (stored != null) {
       tasks = (stored as List).map((t) => SimulationTask.fromMap(t)).toList();
     } else {
       tasks = [];
     }
-    final storedDate = _box.get('date_$currentProject');
+    final storedDate = _box.get('date_exec_$currentExecutor');
     if (storedDate != null) startDate = DateTime.parse(storedDate);
     else startDate = DateTime.now();
     resultText = '';
@@ -56,44 +58,50 @@ class ProjectController extends ChangeNotifier {
   }
 
   void saveData() {
-    _box.put('proj_$currentProject', tasks.map((t) => t.toMap()).toList());
+    if (currentExecutor.isEmpty) return;
+    _box.put('exec_$currentExecutor', tasks.map((t) => t.toMap()).toList());
   }
 
-  void saveProjectsList() {
-    _box.put('projects_list', projects);
+  void saveExecutorsList() {
+    _box.put('executors_list', executors);
   }
 
   void setStartDate(DateTime date) {
     startDate = date;
-    _box.put('date_$currentProject', date.toIso8601String());
+    if (currentExecutor.isNotEmpty) {
+      _box.put('date_exec_$currentExecutor', date.toIso8601String());
+    }
     if (ganttData.isNotEmpty) runSimulation();
     notifyListeners();
   }
 
-  void createNewProject(String name) {
-    if (name.isEmpty || projects.contains(name)) return;
-    projects.add(name);
-    currentProject = name;
-    saveProjectsList();
+  void createNewExecutor(String name) {
+    if (name.isEmpty || executors.contains(name)) return;
+    executors.add(name);
+    currentExecutor = name;
+    saveExecutorsList();
     loadData();
   }
 
-  void deleteProject(String name) {
-    if (projects.length <= 1) return;
-    projects.remove(name);
-    _box.delete('proj_$name');
-    _box.delete('date_$name');
-    currentProject = projects.first;
-    saveProjectsList();
-    loadData();
+  void deleteExecutor(String name) {
+    if (!executors.contains(name)) return;
+    _box.delete('exec_$name');
+    _box.delete('date_exec_$name');
+    executors.remove(name);
+    if (currentExecutor == name) {
+      currentExecutor = executors.isNotEmpty ? executors.first : '';
+      loadData();
+    } else {
+      saveExecutorsList();
+      notifyListeners();
+    }
   }
 
-  // ИЗМЕНЁННЫЙ МЕТОД: сбрасываем график при добавлении нового этапа
   void addTask() {
+    if (currentExecutor.isEmpty) return;
     String newId = (tasks.length + 1).toString();
     tasks.add(SimulationTask(id: newId, name: 'Новый этап $newId'));
     saveData();
-    // Очистка всех результатов моделирования
     resultText = '';
     ganttData = {};
     p90Duration = 0;
@@ -106,7 +114,6 @@ class ProjectController extends ChangeNotifier {
     for (int i = 0; i < tasks.length; i++)
       tasks[i].id = (i + 1).toString();
     saveData();
-    // тоже можно сбросить, но пока не трогаем
     notifyListeners();
   }
 
@@ -148,7 +155,6 @@ class ProjectController extends ChangeNotifier {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
       bool updated = false;
-
       for (int i = 0; i < tasks.length; i++) {
         String taskId = tasks[i].id;
         if (incomingData.containsKey(taskId) || incomingData.containsKey(tasks[i].name)) {
@@ -158,7 +164,6 @@ class ProjectController extends ChangeNotifier {
           updated = true;
         }
       }
-
       if (updated) {
         saveData();
         runSimulation();
@@ -180,6 +185,7 @@ class ProjectController extends ChangeNotifier {
       'max': t.max,
       'dependsOn': t.dependsOn,
       'workType': t.workType,
+      'executor': currentExecutor,
     }).toList();
     return jsonEncode(plan);
   }
@@ -187,7 +193,6 @@ class ProjectController extends ChangeNotifier {
   void runSimulation() {
     topRisks = [];
     if (tasks.isEmpty) return;
-
     for (var t in tasks) {
       if (!t.isCompleted) {
         if (t.min == 0 && t.likely == 0 && t.max == 0) {
@@ -204,15 +209,12 @@ class ProjectController extends ChangeNotifier {
         }
       }
     }
-
     double p90 = MonteCarloEngine.calculate(tasks);
     final baseline = MonteCarloEngine.calculateBaselinePlan(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
-
     DateTime finishDate = startDate.add(Duration(days: p90.ceil()));
     String fDay = finishDate.day.toString().padLeft(2, '0');
     String fMonth = finishDate.month.toString().padLeft(2, '0');
-
     resultText = "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
     ganttData = baseline.taskData;
     p90Duration = p90;

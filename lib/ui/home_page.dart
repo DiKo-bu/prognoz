@@ -122,7 +122,7 @@ class _HomePageState extends State<HomePage> {
             actions: [
               // Иконка моделирования
               IconButton(
-                icon: const Icon(Icons.play_circle_fill, color: Colors.white, size: 28),
+                icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
                 tooltip: 'Выполнить моделирование',
                 onPressed: _runModeling,
               ),

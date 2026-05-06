@@ -161,8 +161,7 @@ class ExecutorController extends ChangeNotifier {
       }
       if (updated) {
         saveData();
-        runSimulation();
-        resultText = "✅ Отчет загружен. График перестроен.\n\n$resultText";
+        runSimulation();   // только пересчёт, без лишнего текста
         notifyListeners();
       }
     } catch (e) {
@@ -209,20 +208,11 @@ class ExecutorController extends ChangeNotifier {
     final baseline = MonteCarloEngine.calculateBaselinePlan(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
 
-    // Собираем предупреждения о превышении максимума
-    String warnings = '';
-    for (var t in tasks) {
-      if (t.isCompleted && t.actualDuration > t.max) {
-        warnings += '⚠️ Этап «${t.name}» превысил максимум (${t.actualDuration} > ${t.max} дн.)\n';
-      }
-    }
-
     DateTime finishDate = startDate.add(Duration(days: p90.ceil()));
     String fDay = finishDate.day.toString().padLeft(2, '0');
     String fMonth = finishDate.month.toString().padLeft(2, '0');
 
-    resultText = (warnings.isNotEmpty ? warnings + '\n' : '') +
-        "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
+    resultText = "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
     ganttData = baseline.taskData;
     p90Duration = p90;
     notifyListeners();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/controller.dart';
+import '../logic/engine.dart';
 import 'parts.dart';
 import 'widgets/executor_drawer.dart';
 
@@ -46,6 +47,9 @@ class _HomePageState extends State<HomePage> {
             onPressed: () {
               _controller.importProgressFromJson(importCtrl.text);
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Отчет принят, график перестроен')),
+              );
             },
             child: const Text('ОБНОВИТЬ ГРАФИК'),
           ),
@@ -109,21 +113,28 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
             child: Column(
               children: [
+                // Строка даты старта
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Старт: $startDay.$startMonth.$startYear", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text("Старт: $startDay.$startMonth.$startYear",
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                       TextButton.icon(
                         icon: const Icon(Icons.calendar_month),
                         label: const Text("Изменить"),
                         onPressed: () async {
                           DateTime? picked = await showDatePicker(
-                            context: context, initialDate: _controller.startDate,
-                            firstDate: DateTime(2020), lastDate: DateTime(2030),
+                            context: context,
+                            initialDate: _controller.startDate,
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2030),
                           );
                           if (picked != null) _controller.setStartDate(picked);
                         },
@@ -131,6 +142,8 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
+
+                // Список этапов (задачи)
                 Expanded(
                   flex: 6,
                   child: _controller.tasks.isEmpty
@@ -158,56 +171,209 @@ class _HomePageState extends State<HomePage> {
                           },
                         ),
                 ),
-                if (_controller.resultText.isNotEmpty)
-                  Expanded(
-                    flex: 4,
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Column(
-                          children: [
-                            Text(_controller.resultText, textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
-                                    color: _controller.resultText.contains("ОШИБКА") ? Colors.red : Colors.green[700])),
-                            const SizedBox(height: 10),
-                            GanttChart(data: _controller.ganttData, totalDuration: _controller.p90Duration, startDate: _controller.startDate),
-                            if (_controller.topRisks.isNotEmpty)
-                              Container(
-                                margin: const EdgeInsets.only(top: 15), padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(color: Colors.red.withOpacity(0.05), border: Border.all(color: Colors.red.withOpacity(0.3)), borderRadius: BorderRadius.circular(8)),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Row(children: [Icon(Icons.warning_amber_rounded, color: Colors.red), SizedBox(width: 8), Text("КРИТИЧЕСКИЕ УЗЛЫ (Влияние на финиш)", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red))]),
-                                    const SizedBox(height: 10),
-                                    ..._controller.topRisks.map((risk) {
-                                      double maxImpact = _controller.topRisks.first.impactDays;
-                                      double fraction = maxImpact > 0 ? risk.impactDays / maxImpact : 0;
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 8.0),
-                                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                          Text("${risk.taskName} (Угроза: +${risk.impactDays.toStringAsFixed(1)} дн.)", style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                                          const SizedBox(height: 4),
-                                          LinearProgressIndicator(value: fraction, backgroundColor: Colors.red.withOpacity(0.1), color: Colors.red, minHeight: 8, borderRadius: BorderRadius.circular(4)),
-                                        ]),
-                                      );
-                                    }),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
+
+                // Блок результатов и диаграммы
+                if (_controller.resultText.startsWith("ОШИБКА"))
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
                     ),
+                    child: Text(_controller.resultText, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
                   ),
-                SizedBox(width: double.infinity, height: 55,
-                  child: ElevatedButton(onPressed: _controller.runSimulation, child: const Text("ВЫПОЛНИТЬ МОДЕЛИРОВАНИЕ")),
+
+                if (_controller.ganttData.isNotEmpty)
+                  Expanded(
+                    flex: 5,
+                    child: _buildDashboard(),
+                  ),
+
+                // Кнопка моделирования
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    onPressed: _controller.runSimulation,
+                    child: const Text("ВЫПОЛНИТЬ МОДЕЛИРОВАНИЕ"),
+                  ),
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  // ===== ДАШБОРД =====
+  Widget _buildDashboard() {
+    final start = _controller.startDate;
+    final p90 = _controller.p90Duration;
+    final finishDate = start.add(Duration(days: p90.ceil()));
+    final formattedFinish = "${finishDate.day.toString().padLeft(2, '0')}.${finishDate.month.toString().padLeft(2, '0')}.${finishDate.year}";
+
+    // Собираем превышения
+    final overMaxTasks = _controller.tasks.where((t) => t.isCompleted && t.actualDuration > t.max).toList();
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Карточка ФИНИШ
+          Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.flag_circle, color: Colors.green, size: 28),
+                      SizedBox(width: 8),
+                      Text("Финиш (90%)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(formattedFinish, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green)),
+                  const SizedBox(height: 4),
+                  Text("${p90.toStringAsFixed(1)} рабочих дней", style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                ],
+              ),
+            ),
+          ),
+
+          // Карточка ПРЕДУПРЕЖДЕНИЯ (если есть превышения)
+          if (overMaxTasks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Card(
+              color: Colors.orange.shade50,
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                        SizedBox(width: 8),
+                        Text("Превышения максимума", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ...overMaxTasks.map((t) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  "${t.name}: факт ${t.actualDuration} дн. > макс ${t.max} дн.",
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // Карточка КРИТИЧЕСКИЕ УЗЛЫ (если есть)
+          if (_controller.topRisks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: const [
+                        Icon(Icons.dangerous, color: Colors.red, size: 24),
+                        SizedBox(width: 8),
+                        Text("Критические узлы", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    ..._controller.topRisks.map((risk) {
+                      double maxImpact = _controller.topRisks.first.impactDays;
+                      double fraction = maxImpact > 0 ? risk.impactDays / maxImpact : 0;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("${risk.taskName} (Угроза: +${risk.impactDays.toStringAsFixed(1)} дн.)",
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            LinearProgressIndicator(
+                              value: fraction,
+                              backgroundColor: Colors.red.shade100,
+                              color: Colors.red,
+                              minHeight: 8,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          // Диаграмма Ганта с легендой
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Диаграмма Ганта", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                GanttChart(
+                  data: _controller.ganttData,
+                  totalDuration: _controller.p90Duration,
+                  startDate: _controller.startDate,
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _legendItem(Colors.blue, "План"),
+                    const SizedBox(width: 12),
+                    _legendItem(Colors.green, "Выполнено"),
+                    const SizedBox(width: 12),
+                    _legendItem(Colors.red, "Превышение"),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 16, height: 16, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
     );
   }
 
@@ -220,7 +386,10 @@ class _HomePageState extends State<HomePage> {
         content: TextField(controller: textCtrl, decoration: const InputDecoration(hintText: 'ФИО исполнителя')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('ОТМЕНА')),
-          ElevatedButton(onPressed: () { _controller.createNewExecutor(textCtrl.text); Navigator.pop(ctx); }, child: const Text('СОЗДАТЬ')),
+          ElevatedButton(onPressed: () {
+            _controller.createNewExecutor(textCtrl.text);
+            Navigator.pop(ctx);
+          }, child: const Text('СОЗДАТЬ')),
         ],
       ),
     );

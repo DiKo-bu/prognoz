@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 import '../logic/engine.dart';
-import '../ui/parts.dart';
+import '../ui/constants.dart';
 
 class ExecutorController extends ChangeNotifier {
   late Box _box;

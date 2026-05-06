@@ -1,0 +1,253 @@
+import 'package:flutter/material.dart';
+import '../logic/engine.dart';
+import 'constants.dart';
+
+class TaskInputCard extends StatelessWidget {
+  final String id;
+  final String title;
+  final double currentMin, currentLikely, currentMax;
+  final String currentDepends;
+  final bool isCompleted;
+  final double actualDuration;
+  final String? plantingType;
+  final String? culture;
+  final double? plantingQuantity;
+  final double? plantingArea;
+  final Function(bool) onCompletionChange;
+  final Function(double) onActualChange;
+  final Function(String) onTitleChange;
+  final Function(String, double) onUpdate;
+  final Function(String) onDependsChange;
+  final Function(String?) onPlantingTypeChange;
+  final Function(String?) onCultureChange;
+  final Function(double) onPlantingQuantityChange;
+  final Function(double) onPlantingAreaChange;
+  final VoidCallback onDelete;
+
+  const TaskInputCard({
+    super.key,
+    required this.id,
+    required this.title,
+    required this.currentMin,
+    required this.currentLikely,
+    required this.currentMax,
+    required this.currentDepends,
+    required this.isCompleted,
+    required this.actualDuration,
+    this.plantingType,
+    this.culture,
+    this.plantingQuantity,
+    this.plantingArea,
+    required this.onCompletionChange,
+    required this.onActualChange,
+    required this.onTitleChange,
+    required this.onUpdate,
+    required this.onDependsChange,
+    required this.onPlantingTypeChange,
+    required this.onCultureChange,
+    required this.onPlantingQuantityChange,
+    required this.onPlantingAreaChange,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isInvalid = !isCompleted && ((currentMin > currentLikely) || (currentLikely > currentMax));
+    final bool notEmpty = currentMin != 0 || currentLikely != 0 || currentMax != 0;
+    final bool showError = isInvalid && notEmpty;
+    final bool isOverMax = isCompleted && actualDuration > currentMax;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      elevation: 2,
+      shape: showError || isOverMax
+          ? RoundedRectangleBorder(
+              side: BorderSide(color: showError ? Colors.red : Colors.orange, width: 2),
+              borderRadius: BorderRadius.circular(4))
+          : null,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Column(
+          children: [
+            _buildHeader(isOverMax, isCompleted, showError),
+            _buildCompletionRow(isOverMax),
+            if (isOverMax) _overMaxWarning,
+            _buildDurationFields(isCompleted, showError),
+            if (showError) _ratioError,
+            const SizedBox(height: 8),
+            if (title == 'Посадка') _buildPlantingFields(),
+            _buildDependsField(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isOverMax, bool isCompleted, bool showError) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+              color: isOverMax
+                  ? Colors.orange
+                  : (isCompleted ? Colors.green : (showError ? Colors.red : Colors.blue[700])),
+              borderRadius: BorderRadius.circular(4)),
+          child: Text(id, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            value: workNames.contains(title) ? title : null,
+            decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+            items: workNames.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)))).toList(),
+            onChanged: (v) {
+              if (v != null) onTitleChange(v);
+            },
+            hint: const Text('Выберите работу', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          ),
+        ),
+        IconButton(
+            icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
+            onPressed: onDelete,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints()),
+      ],
+    );
+  }
+
+  Widget _buildCompletionRow(bool isOverMax) {
+    return Row(
+      children: [
+        Checkbox(value: isCompleted, activeColor: Colors.green, onChanged: (v) => onCompletionChange(v ?? false)),
+        const Text("Завершено", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13)),
+        if (isCompleted) ...[
+          const Spacer(),
+          SizedBox(
+            width: 80,
+            child: TextFormField(
+              initialValue: actualDuration == 0 ? '' : actualDuration.toString().replaceAll(RegExp(r'\.0$'), ''),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              style: TextStyle(fontSize: 13, color: isOverMax ? Colors.red : Colors.green, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                labelText: 'Факт. дней',
+                isDense: true,
+                labelStyle: TextStyle(color: isOverMax ? Colors.red : Colors.green),
+                suffixIcon: isOverMax ? const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 18) : null,
+              ),
+              onChanged: (v) => onActualChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+            ),
+          ),
+          const SizedBox(width: 5),
+        ],
+      ],
+    );
+  }
+
+  Widget get _overMaxWarning => const Padding(
+        padding: EdgeInsets.only(top: 4),
+        child: Text("⚠️ Превышение максимума!",
+            style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+      );
+
+  Widget _buildDurationFields(bool isCompleted, bool showError) {
+    return IgnorePointer(
+      ignoring: isCompleted,
+      child: Opacity(
+        opacity: isCompleted ? 0.3 : 1.0,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _field('Мин', currentMin, (v) => onUpdate('min', v)),
+            _field('Норма', currentLikely, (v) => onUpdate('likely', v)),
+            _field('Макс', currentMax, (v) => onUpdate('max', v)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget get _ratioError => const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text("Ошибка: должно быть Мин <= Норма <= Макс",
+            style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+      );
+
+  Widget _buildPlantingFields() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: plantingType,
+                decoration: const InputDecoration(labelText: 'Вид', isDense: true),
+                items: plantingTypes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: onPlantingTypeChange,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                value: culture,
+                decoration: const InputDecoration(labelText: 'Культура', isDense: true),
+                items: cultures.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                onChanged: onCultureChange,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: plantingQuantity != null ? plantingQuantity!.toString().replaceAll(RegExp(r'\.0$'), '') : '',
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Кол-во, шт', isDense: true),
+                onChanged: (v) => onPlantingQuantityChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: plantingArea != null ? plantingArea!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
+                onChanged: (v) => onPlantingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildDependsField() {
+    return TextFormField(
+      initialValue: currentDepends,
+      decoration: const InputDecoration(
+          labelText: 'После этапов (номера через запятую)',
+          isDense: true,
+          border: OutlineInputBorder(),
+          labelStyle: TextStyle(fontSize: 11)),
+      style: const TextStyle(fontSize: 13),
+      onChanged: onDependsChange,
+    );
+  }
+
+  Widget _field(String label, double val, Function(double) onChanged, {Color? color}) {
+    String initVal = val == 0 ? '' : val.toString().replaceAll(RegExp(r'\.0$'), '');
+    return SizedBox(
+      width: 65,
+      child: TextFormField(
+        initialValue: initVal,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        style: TextStyle(fontSize: 13, color: color, fontWeight: color != null ? FontWeight.bold : FontWeight.normal),
+        decoration: InputDecoration(labelText: label, isDense: true, labelStyle: TextStyle(color: color)),
+        onChanged: (v) => onChanged(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+      ),
+    );
+  }
+}

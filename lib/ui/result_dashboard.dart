@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/controller.dart';
 import '../logic/engine.dart';
-import 'parts.dart';
+import 'gantt_chart.dart';
 
 class ResultDashboardScreen extends StatelessWidget {
   final ExecutorController controller;

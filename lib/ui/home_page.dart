@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../data/controller.dart';
-import 'parts.dart';
+import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
 import 'result_dashboard.dart';
 

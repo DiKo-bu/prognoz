@@ -204,10 +204,10 @@ class ExecutorController extends ChangeNotifier {
         'executor': currentExecutor,
       };
       if (t.name == 'Посадка') {
-        map['plantingType'] = t.plantingType;
-        map['culture'] = t.culture;
-        map['plantingQuantity'] = t.plantingQuantity;
-        map['plantingArea'] = t.plantingArea;
+        map['plantingType'] = t.plantingType as dynamic;
+        map['culture'] = t.culture as dynamic;
+        map['plantingQuantity'] = t.plantingQuantity as dynamic;
+        map['plantingArea'] = t.plantingArea as dynamic;
       }
       return map;
     }).toList();

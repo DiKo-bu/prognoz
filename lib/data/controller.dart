@@ -121,6 +121,7 @@ class ExecutorController extends ChangeNotifier {
   void updateTaskTitle(int index, String title) {
     tasks[index].name = title;
     saveData();
+    notifyListeners();   // ← теперь карточка обновится при смене названия
   }
 
   void updateTaskValues(int index, String key, double val) {
@@ -146,25 +147,28 @@ class ExecutorController extends ChangeNotifier {
     saveData();
   }
 
-  // Новые методы для полей посадки
   void updateTaskPlantingType(int index, String? value) {
     tasks[index].plantingType = value;
     saveData();
+    notifyListeners();   // перерисовка карточки
   }
 
   void updateTaskCulture(int index, String? value) {
     tasks[index].culture = value;
     saveData();
+    notifyListeners();
   }
 
   void updateTaskPlantingQuantity(int index, double value) {
     tasks[index].plantingQuantity = value;
     saveData();
+    notifyListeners();
   }
 
   void updateTaskPlantingArea(int index, double value) {
     tasks[index].plantingArea = value;
     saveData();
+    notifyListeners();
   }
 
   void importProgressFromJson(String jsonString) {

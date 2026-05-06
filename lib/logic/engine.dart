@@ -27,7 +27,6 @@ class SimulationTask {
   List<String> dependsOn;
   bool isCompleted;
   double actualDuration;
-  String workType;   // <-- новое поле
 
   SimulationTask({
     required this.id,
@@ -38,7 +37,6 @@ class SimulationTask {
     this.dependsOn = const [],
     this.isCompleted = false,
     this.actualDuration = 0,
-    this.workType = 'Обход',   // <-- добавлено в конструктор
   });
 
   Map<String, dynamic> toMap() => {
@@ -50,7 +48,6 @@ class SimulationTask {
     'dependsOn': dependsOn,
     'isCompleted': isCompleted,
     'actualDuration': actualDuration,
-    'workType': workType,   // <-- добавлено
   };
 
   factory SimulationTask.fromMap(Map<dynamic, dynamic> map) => SimulationTask(
@@ -62,7 +59,6 @@ class SimulationTask {
     dependsOn: List<String>.from(map['dependsOn'] ?? []),
     isCompleted: map['isCompleted'] ?? false,
     actualDuration: (map['actualDuration'] ?? 0).toDouble(),
-    workType: map['workType'] ?? 'Обход',   // <-- добавлено
   );
 
   double getSample(Random rnd) {

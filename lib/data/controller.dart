@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 import '../logic/engine.dart';
+import '../ui/parts.dart'; // для workNames
 
 class ExecutorController extends ChangeNotifier {
   late Box _box;
@@ -97,10 +98,12 @@ class ExecutorController extends ChangeNotifier {
     }
   }
 
+  // Добавление этапа с названием по умолчанию (первый из списка работ)
   void addTask() {
     if (currentExecutor.isEmpty) return;
     String newId = (tasks.length + 1).toString();
-    tasks.add(SimulationTask(id: newId, name: 'Новый этап $newId'));
+    // Устанавливаем имя по умолчанию из списка workNames (импортирован из parts.dart)
+    tasks.add(SimulationTask(id: newId, name: workNames.first));
     saveData();
     resultText = '';
     ganttData = {};
@@ -145,12 +148,6 @@ class ExecutorController extends ChangeNotifier {
     saveData();
   }
 
-  void updateTaskWorkType(int index, String type) {
-    tasks[index].workType = type;
-    saveData();
-    notifyListeners();
-  }
-
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -184,7 +181,7 @@ class ExecutorController extends ChangeNotifier {
       'likely': t.likely,
       'max': t.max,
       'dependsOn': t.dependsOn,
-      'workType': t.workType,
+      'workType': t.name,   // теперь workType = названию
       'executor': currentExecutor,
     }).toList();
     return jsonEncode(plan);

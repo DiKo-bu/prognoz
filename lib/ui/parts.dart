@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../logic/engine.dart';
 
+// Список доступных названий работ
+const List<String> workNames = ['Подготовка почвы', 'Посадка', 'Вырубка', 'Охрана', 'Обход'];
+
 class TaskInputCard extends StatelessWidget {
   final String id;
   final String title;
@@ -9,13 +12,11 @@ class TaskInputCard extends StatelessWidget {
   final String currentDepends;
   final bool isCompleted;
   final double actualDuration;
-  final String workType;
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
   final Function(String) onTitleChange;
   final Function(String, double) onUpdate;
   final Function(String) onDependsChange;
-  final Function(String) onWorkTypeChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -28,13 +29,11 @@ class TaskInputCard extends StatelessWidget {
     required this.currentDepends,
     required this.isCompleted,
     required this.actualDuration,
-    required this.workType,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
     required this.onUpdate,
     required this.onDependsChange,
-    required this.onWorkTypeChange,
     required this.onDelete,
   });
 
@@ -69,14 +68,14 @@ class TaskInputCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: TextFormField(
-                    initialValue: title,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        decoration: isCompleted ? TextDecoration.lineThrough : null),
+                  child: DropdownButtonFormField<String>(
+                    value: workNames.contains(title) ? title : null,
                     decoration: const InputDecoration(border: InputBorder.none, isDense: true),
-                    onChanged: onTitleChange,
+                    items: workNames.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)))).toList(),
+                    onChanged: (v) {
+                      if (v != null) onTitleChange(v);
+                    },
+                    hint: const Text('Выберите работу', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ),
                 ),
                 IconButton(
@@ -96,20 +95,6 @@ class TaskInputCard extends StatelessWidget {
                   const SizedBox(width: 5),
                 ]
               ],
-            ),
-            // Выбор типа работы
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: DropdownButtonFormField<String>(
-                value: workType,
-                decoration: const InputDecoration(labelText: 'Тип работы', isDense: true),
-                items: ['Обход', 'Подготовка почвы', 'Посадка', 'Вырубка', 'Охрана']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) onWorkTypeChange(v);
-                },
-              ),
             ),
             IgnorePointer(
               ignoring: isCompleted,

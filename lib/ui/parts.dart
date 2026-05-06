@@ -3,7 +3,6 @@ import 'dart:ui' as ui;
 import '../logic/engine.dart';
 
 const List<String> workNames = ['Подготовка почвы', 'Посадка', 'Вырубка', 'Охрана', 'Обход'];
-
 const List<String> plantingTypes = ['сеянцы', 'саженцы', 'черенки'];
 const List<String> cultures = ['вяз', 'тополь', 'ива', 'лох', 'смородина', 'клен', 'ясень'];
 
@@ -160,7 +159,6 @@ class TaskInputCard extends StatelessWidget {
                     style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             const SizedBox(height: 8),
-
             // ---------- Поля только для Посадки ----------
             if (title == 'Посадка') ...[
               Row(

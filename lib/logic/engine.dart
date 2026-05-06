@@ -5,7 +5,14 @@ class GanttTaskData {
   final double startTime;
   final double endTime;
   final bool isCompleted;
-  GanttTaskData({required this.name, required this.startTime, required this.endTime, this.isCompleted = false});
+  final bool isOverMax;   // новое поле
+  GanttTaskData({
+    required this.name,
+    required this.startTime,
+    required this.endTime,
+    this.isCompleted = false,
+    this.isOverMax = false,
+  });
 }
 
 class BaselinePlan {
@@ -129,7 +136,14 @@ class MonteCarloEngine {
       stack.remove(task.id);
       double endTime = startTime + (task.isCompleted ? task.actualDuration : task.likely);
       endTimes[task.id] = endTime;
-      taskData[task.id] = GanttTaskData(name: task.name, startTime: startTime, endTime: endTime, isCompleted: task.isCompleted);
+      bool overMax = task.isCompleted && task.actualDuration > task.max;
+      taskData[task.id] = GanttTaskData(
+        name: task.name,
+        startTime: startTime,
+        endTime: endTime,
+        isCompleted: task.isCompleted,
+        isOverMax: overMax,
+      );
       return endTime;
     }
 
@@ -175,6 +189,14 @@ class MonteCarloEngine {
       double impact = worstCaseDuration - baselineDuration;
       if (impact > 0.1) {
         risks.add(RiskImpact(taskName: task.name, impactDays: impact));
+      }
+    }
+
+    // Добавляем риски для завершённых этапов с превышением максимума
+    for (var task in tasks) {
+      if (task.isCompleted && task.actualDuration > task.max) {
+        double over = task.actualDuration - task.max;
+        risks.add(RiskImpact(taskName: task.name, impactDays: over));
       }
     }
 

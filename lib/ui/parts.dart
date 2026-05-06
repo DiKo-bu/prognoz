@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import '../logic/engine.dart';
 
-// Список доступных названий работ
 const List<String> workNames = ['Подготовка почвы', 'Посадка', 'Вырубка', 'Охрана', 'Обход'];
 
 class TaskInputCard extends StatelessWidget {
@@ -42,13 +41,14 @@ class TaskInputCard extends StatelessWidget {
     bool isInvalid = !isCompleted && ((currentMin > currentLikely) || (currentLikely > currentMax));
     bool notEmpty = currentMin != 0 || currentLikely != 0 || currentMax != 0;
     bool showError = isInvalid && notEmpty;
+    bool isOverMax = isCompleted && actualDuration > currentMax;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 2,
-      shape: showError
+      shape: showError || isOverMax
           ? RoundedRectangleBorder(
-              side: const BorderSide(color: Colors.red, width: 2),
+              side: BorderSide(color: showError ? Colors.red : Colors.orange, width: 2),
               borderRadius: BorderRadius.circular(4))
           : null,
       child: Padding(
@@ -60,9 +60,9 @@ class TaskInputCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                      color: isCompleted
-                          ? Colors.green
-                          : (showError ? Colors.red : Colors.blue[700]),
+                      color: isOverMax
+                          ? Colors.orange
+                          : (isCompleted ? Colors.green : (showError ? Colors.red : Colors.blue[700])),
                       borderRadius: BorderRadius.circular(4)),
                   child: Text(id, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
@@ -91,11 +91,36 @@ class TaskInputCard extends StatelessWidget {
                 const Text("Завершено", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13)),
                 if (isCompleted) ...[
                   const Spacer(),
-                  _field('Факт. дней', actualDuration, onActualChange, color: Colors.green),
+                  // Поле фактических дней с подсветкой превышения
+                  SizedBox(
+                    width: 80,
+                    child: TextFormField(
+                      initialValue: actualDuration == 0 ? '' : actualDuration.toString().replaceAll(RegExp(r'\.0$'), ''),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isOverMax ? Colors.red : Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Факт. дней',
+                        isDense: true,
+                        labelStyle: TextStyle(color: isOverMax ? Colors.red : Colors.green),
+                        suffixIcon: isOverMax ? const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 18) : null,
+                      ),
+                      onChanged: (v) => onActualChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+                    ),
+                  ),
                   const SizedBox(width: 5),
                 ]
               ],
             ),
+            if (isOverMax)
+              const Padding(
+                padding: EdgeInsets.only(top: 4),
+                child: Text("⚠️ Превышение максимума!",
+                    style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
             IgnorePointer(
               ignoring: isCompleted,
               child: Opacity(
@@ -193,13 +218,20 @@ class GanttPainter extends CustomPainter {
     for (var taskId in data.keys) {
       final task = data[taskId]!;
       double y = (index * 35.0) + 5;
-      final paintBar = Paint()
-        ..color = task.isCompleted ? Colors.green[400]! : Colors.blue[300]!
-        ..style = PaintingStyle.fill;
+      // Цвет полосы: красный при превышении, иначе зелёный/синий
+      Color barColor;
+      if (task.isOverMax) {
+        barColor = Colors.red[400]!;
+      } else if (task.isCompleted) {
+        barColor = Colors.green[400]!;
+      } else {
+        barColor = Colors.blue[300]!;
+      }
+      final paintBar = Paint()..color = barColor..style = PaintingStyle.fill;
 
       textPainter.text = TextSpan(
           text: taskId,
-          style: TextStyle(fontWeight: FontWeight.bold, color: task.isCompleted ? Colors.green : Colors.blue));
+          style: TextStyle(fontWeight: FontWeight.bold, color: task.isOverMax ? Colors.red : (task.isCompleted ? Colors.green : Colors.blue)));
       textPainter.layout();
       textPainter.paint(canvas, Offset(5, y + 8));
 

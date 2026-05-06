@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'dart:convert';
 import '../logic/engine.dart';
-import '../ui/parts.dart'; // для workNames
+import '../ui/parts.dart';
 
 class ExecutorController extends ChangeNotifier {
   late Box _box;
@@ -98,11 +98,9 @@ class ExecutorController extends ChangeNotifier {
     }
   }
 
-  // Добавление этапа с названием по умолчанию (первый из списка работ)
   void addTask() {
     if (currentExecutor.isEmpty) return;
     String newId = (tasks.length + 1).toString();
-    // Устанавливаем имя по умолчанию из списка workNames (импортирован из parts.dart)
     tasks.add(SimulationTask(id: newId, name: workNames.first));
     saveData();
     resultText = '';
@@ -181,7 +179,7 @@ class ExecutorController extends ChangeNotifier {
       'likely': t.likely,
       'max': t.max,
       'dependsOn': t.dependsOn,
-      'workType': t.name,   // теперь workType = названию
+      'workType': t.name,
       'executor': currentExecutor,
     }).toList();
     return jsonEncode(plan);
@@ -206,13 +204,25 @@ class ExecutorController extends ChangeNotifier {
         }
       }
     }
+
     double p90 = MonteCarloEngine.calculate(tasks);
     final baseline = MonteCarloEngine.calculateBaselinePlan(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
+
+    // Собираем предупреждения о превышении максимума
+    String warnings = '';
+    for (var t in tasks) {
+      if (t.isCompleted && t.actualDuration > t.max) {
+        warnings += '⚠️ Этап «${t.name}» превысил максимум (${t.actualDuration} > ${t.max} дн.)\n';
+      }
+    }
+
     DateTime finishDate = startDate.add(Duration(days: p90.ceil()));
     String fDay = finishDate.day.toString().padLeft(2, '0');
     String fMonth = finishDate.month.toString().padLeft(2, '0');
-    resultText = "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
+
+    resultText = (warnings.isNotEmpty ? warnings + '\n' : '') +
+        "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
     ganttData = baseline.taskData;
     p90Duration = p90;
     notifyListeners();

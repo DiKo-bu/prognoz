@@ -5,7 +5,7 @@ class GanttTaskData {
   final double startTime;
   final double endTime;
   final bool isCompleted;
-  final bool isOverMax;   // новое поле
+  final bool isOverMax;
   GanttTaskData({
     required this.name,
     required this.startTime,
@@ -35,6 +35,12 @@ class SimulationTask {
   bool isCompleted;
   double actualDuration;
 
+  // Поля только для Посадки
+  String? plantingType;   // сеянцы / саженцы / черенки
+  String? culture;        // вяз, тополь, ива, лох, смородина, клен, ясень
+  double? plantingQuantity; // штук
+  double? plantingArea;     // гектаров
+
   SimulationTask({
     required this.id,
     required this.name,
@@ -44,6 +50,10 @@ class SimulationTask {
     this.dependsOn = const [],
     this.isCompleted = false,
     this.actualDuration = 0,
+    this.plantingType,
+    this.culture,
+    this.plantingQuantity,
+    this.plantingArea,
   });
 
   Map<String, dynamic> toMap() => {
@@ -55,6 +65,10 @@ class SimulationTask {
     'dependsOn': dependsOn,
     'isCompleted': isCompleted,
     'actualDuration': actualDuration,
+    if (plantingType != null) 'plantingType': plantingType,
+    if (culture != null) 'culture': culture,
+    if (plantingQuantity != null) 'plantingQuantity': plantingQuantity,
+    if (plantingArea != null) 'plantingArea': plantingArea,
   };
 
   factory SimulationTask.fromMap(Map<dynamic, dynamic> map) => SimulationTask(
@@ -66,6 +80,10 @@ class SimulationTask {
     dependsOn: List<String>.from(map['dependsOn'] ?? []),
     isCompleted: map['isCompleted'] ?? false,
     actualDuration: (map['actualDuration'] ?? 0).toDouble(),
+    plantingType: map['plantingType'],
+    culture: map['culture'],
+    plantingQuantity: map['plantingQuantity']?.toDouble(),
+    plantingArea: map['plantingArea']?.toDouble(),
   );
 
   double getSample(Random rnd) {
@@ -192,7 +210,6 @@ class MonteCarloEngine {
       }
     }
 
-    // Добавляем риски для завершённых этапов с превышением максимума
     for (var task in tasks) {
       if (task.isCompleted && task.actualDuration > task.max) {
         double over = task.actualDuration - task.max;

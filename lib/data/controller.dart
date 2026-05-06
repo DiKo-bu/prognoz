@@ -146,6 +146,27 @@ class ExecutorController extends ChangeNotifier {
     saveData();
   }
 
+  // Новые методы для полей посадки
+  void updateTaskPlantingType(int index, String? value) {
+    tasks[index].plantingType = value;
+    saveData();
+  }
+
+  void updateTaskCulture(int index, String? value) {
+    tasks[index].culture = value;
+    saveData();
+  }
+
+  void updateTaskPlantingQuantity(int index, double value) {
+    tasks[index].plantingQuantity = value;
+    saveData();
+  }
+
+  void updateTaskPlantingArea(int index, double value) {
+    tasks[index].plantingArea = value;
+    saveData();
+  }
+
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -161,7 +182,7 @@ class ExecutorController extends ChangeNotifier {
       }
       if (updated) {
         saveData();
-        runSimulation();   // только пересчёт, без лишнего текста
+        runSimulation();
         notifyListeners();
       }
     } catch (e) {
@@ -171,15 +192,24 @@ class ExecutorController extends ChangeNotifier {
   }
 
   String exportPlanToJson() {
-    final plan = tasks.map((t) => {
-      'id': t.id,
-      'name': t.name,
-      'min': t.min,
-      'likely': t.likely,
-      'max': t.max,
-      'dependsOn': t.dependsOn,
-      'workType': t.name,
-      'executor': currentExecutor,
+    final plan = tasks.map((t) {
+      final map = {
+        'id': t.id,
+        'name': t.name,
+        'min': t.min,
+        'likely': t.likely,
+        'max': t.max,
+        'dependsOn': t.dependsOn,
+        'workType': t.name,
+        'executor': currentExecutor,
+      };
+      if (t.name == 'Посадка') {
+        map['plantingType'] = t.plantingType;
+        map['culture'] = t.culture;
+        map['plantingQuantity'] = t.plantingQuantity;
+        map['plantingArea'] = t.plantingArea;
+      }
+      return map;
     }).toList();
     return jsonEncode(plan);
   }

@@ -4,6 +4,9 @@ import '../logic/engine.dart';
 
 const List<String> workNames = ['Подготовка почвы', 'Посадка', 'Вырубка', 'Охрана', 'Обход'];
 
+const List<String> plantingTypes = ['сеянцы', 'саженцы', 'черенки'];
+const List<String> cultures = ['вяз', 'тополь', 'ива', 'лох', 'смородина', 'клен', 'ясень'];
+
 class TaskInputCard extends StatelessWidget {
   final String id;
   final String title;
@@ -11,11 +14,19 @@ class TaskInputCard extends StatelessWidget {
   final String currentDepends;
   final bool isCompleted;
   final double actualDuration;
+  final String? plantingType;
+  final String? culture;
+  final double? plantingQuantity;
+  final double? plantingArea;
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
   final Function(String) onTitleChange;
   final Function(String, double) onUpdate;
   final Function(String) onDependsChange;
+  final Function(String?) onPlantingTypeChange;
+  final Function(String?) onCultureChange;
+  final Function(double) onPlantingQuantityChange;
+  final Function(double) onPlantingAreaChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -28,11 +39,19 @@ class TaskInputCard extends StatelessWidget {
     required this.currentDepends,
     required this.isCompleted,
     required this.actualDuration,
+    this.plantingType,
+    this.culture,
+    this.plantingQuantity,
+    this.plantingArea,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
     required this.onUpdate,
     required this.onDependsChange,
+    required this.onPlantingTypeChange,
+    required this.onCultureChange,
+    required this.onPlantingQuantityChange,
+    required this.onPlantingAreaChange,
     required this.onDelete,
   });
 
@@ -91,7 +110,6 @@ class TaskInputCard extends StatelessWidget {
                 const Text("Завершено", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 13)),
                 if (isCompleted) ...[
                   const Spacer(),
-                  // Поле фактических дней с подсветкой превышения
                   SizedBox(
                     width: 80,
                     child: TextFormField(
@@ -142,6 +160,55 @@ class TaskInputCard extends StatelessWidget {
                     style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
               ),
             const SizedBox(height: 8),
+
+            // ---------- Поля только для Посадки ----------
+            if (title == 'Посадка') ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: plantingType,
+                      decoration: const InputDecoration(labelText: 'Вид', isDense: true),
+                      items: plantingTypes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: onPlantingTypeChange,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      value: culture,
+                      decoration: const InputDecoration(labelText: 'Культура', isDense: true),
+                      items: cultures.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                      onChanged: onCultureChange,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: plantingQuantity != null ? plantingQuantity!.toString().replaceAll(RegExp(r'\.0$'), '') : '',
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Кол-во, шт', isDense: true),
+                      onChanged: (v) => onPlantingQuantityChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextFormField(
+                      initialValue: plantingArea != null ? plantingArea!.toString() : '',
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
+                      onChanged: (v) => onPlantingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+
             TextFormField(
               initialValue: currentDepends,
               decoration: const InputDecoration(
@@ -218,7 +285,6 @@ class GanttPainter extends CustomPainter {
     for (var taskId in data.keys) {
       final task = data[taskId]!;
       double y = (index * 35.0) + 5;
-      // Цвет полосы: красный при превышении, иначе зелёный/синий
       Color barColor;
       if (task.isOverMax) {
         barColor = Colors.red[400]!;

@@ -68,7 +68,6 @@ class _HomePageState extends State<HomePage> {
 
   void _runModeling() {
     _controller.runSimulation();
-    // Если есть ошибка, покажем снэкбар и не пойдём на дашборд
     if (_controller.resultText.startsWith("ОШИБКА")) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_controller.resultText)),
@@ -120,7 +119,6 @@ class _HomePageState extends State<HomePage> {
           appBar: AppBar(
             title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
             actions: [
-              // Иконка моделирования
               IconButton(
                 icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
                 tooltip: 'Выполнить моделирование',
@@ -136,7 +134,6 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
             child: Column(
               children: [
-                // Строка даты старта
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   margin: const EdgeInsets.only(bottom: 10),
@@ -165,7 +162,6 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-                // Список этапов
                 Expanded(
                   child: _controller.tasks.isEmpty
                       ? const Center(child: Text("Нет этапов. Нажмите '+' вверху экрана.", style: TextStyle(color: Colors.grey)))
@@ -182,11 +178,19 @@ class _HomePageState extends State<HomePage> {
                               currentDepends: task.dependsOn.join(', '),
                               isCompleted: task.isCompleted,
                               actualDuration: task.actualDuration,
+                              plantingType: task.plantingType,
+                              culture: task.culture,
+                              plantingQuantity: task.plantingQuantity,
+                              plantingArea: task.plantingArea,
                               onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
                               onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
                               onTitleChange: (v) => _controller.updateTaskTitle(i, v),
                               onUpdate: (key, val) => _controller.updateTaskValues(i, key, val),
                               onDependsChange: (val) => _controller.updateTaskDepends(i, val),
+                              onPlantingTypeChange: (v) => _controller.updateTaskPlantingType(i, v),
+                              onCultureChange: (v) => _controller.updateTaskCulture(i, v),
+                              onPlantingQuantityChange: (v) => _controller.updateTaskPlantingQuantity(i, v),
+                              onPlantingAreaChange: (v) => _controller.updateTaskPlantingArea(i, v),
                               onDelete: () => _controller.removeTask(i),
                             );
                           },

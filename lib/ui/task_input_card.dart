@@ -18,9 +18,12 @@ class TaskInputCard extends StatelessWidget {
   final String? sowingBreed;
   final double? sowingQuantityKg;
   final double? sowingAreaHa;
-  // Выборочная санрубка
+  // Выборочная санитарная рубка
   final double? cuttingArea;
   final double? cuttingVolume;
+  // Сплошная санитарная рубка
+  final double? clearCuttingArea;
+  final double? clearCuttingVolume;
 
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
@@ -36,6 +39,8 @@ class TaskInputCard extends StatelessWidget {
   final Function(double) onSowingAreaHaChange;
   final Function(double) onCuttingAreaChange;
   final Function(double) onCuttingVolumeChange;
+  final Function(double) onClearCuttingAreaChange;
+  final Function(double) onClearCuttingVolumeChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -57,6 +62,8 @@ class TaskInputCard extends StatelessWidget {
     this.sowingAreaHa,
     this.cuttingArea,
     this.cuttingVolume,
+    this.clearCuttingArea,
+    this.clearCuttingVolume,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
@@ -71,6 +78,8 @@ class TaskInputCard extends StatelessWidget {
     required this.onSowingAreaHaChange,
     required this.onCuttingAreaChange,
     required this.onCuttingVolumeChange,
+    required this.onClearCuttingAreaChange,
+    required this.onClearCuttingVolumeChange,
     required this.onDelete,
   });
 
@@ -102,6 +111,7 @@ class TaskInputCard extends StatelessWidget {
             if (title == 'Посадка') _buildPlantingFields(),
             if (title == 'Посев') _buildSowingFields(),
             if (title == 'Выборочная санитарная рубка') _buildCuttingFields(),
+            if (title == 'Сплошная санитарная рубка') _buildClearCuttingFields(),
             _buildDependsField(),
           ],
         ),
@@ -306,6 +316,35 @@ class TaskInputCard extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
                 onChanged: (v) => onCuttingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildClearCuttingFields() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: clearCuttingArea != null ? clearCuttingArea!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
+                onChanged: (v) => onClearCuttingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: clearCuttingVolume != null ? clearCuttingVolume!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
+                onChanged: (v) => onClearCuttingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
               ),
             ),
           ],

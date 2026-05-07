@@ -201,6 +201,18 @@ class ExecutorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTaskClearCuttingArea(int index, double value) {
+    tasks[index].clearCuttingArea = value;
+    saveData();
+    notifyListeners();
+  }
+
+  void updateTaskClearCuttingVolume(int index, double value) {
+    tasks[index].clearCuttingVolume = value;
+    saveData();
+    notifyListeners();
+  }
+
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -251,6 +263,10 @@ class ExecutorController extends ChangeNotifier {
       if (t.name == 'Выборочная санитарная рубка') {
         map['cuttingArea'] = t.cuttingArea as dynamic;
         map['cuttingVolume'] = t.cuttingVolume as dynamic;
+      }
+      if (t.name == 'Сплошная санитарная рубка') {
+        map['clearCuttingArea'] = t.clearCuttingArea as dynamic;
+        map['clearCuttingVolume'] = t.clearCuttingVolume as dynamic;
       }
       return map;
     }).toList();

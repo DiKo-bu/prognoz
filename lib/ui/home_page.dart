@@ -187,6 +187,8 @@ class _HomePageState extends State<HomePage> {
                               sowingAreaHa: task.sowingAreaHa,
                               cuttingArea: task.cuttingArea,
                               cuttingVolume: task.cuttingVolume,
+                              clearCuttingArea: task.clearCuttingArea,
+                              clearCuttingVolume: task.clearCuttingVolume,
                               onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
                               onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
                               onTitleChange: (v) => _controller.updateTaskTitle(i, v),
@@ -201,6 +203,8 @@ class _HomePageState extends State<HomePage> {
                               onSowingAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
                               onCuttingAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
                               onCuttingVolumeChange: (v) => _controller.updateTaskCuttingVolume(i, v),
+                              onClearCuttingAreaChange: (v) => _controller.updateTaskClearCuttingArea(i, v),
+                              onClearCuttingVolumeChange: (v) => _controller.updateTaskClearCuttingVolume(i, v),
                               onDelete: () => _controller.removeTask(i),
                             );
                           },

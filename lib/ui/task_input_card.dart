@@ -24,6 +24,11 @@ class TaskInputCard extends StatelessWidget {
   // Сплошная санитарная рубка
   final double? clearCuttingArea;
   final double? clearCuttingVolume;
+  // Уборка захламленности
+  final double? clearingArea;
+  final double? clearingVolume;
+  // Установка панно и аншлагов
+  final double? panelsQuantity;
 
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
@@ -41,6 +46,9 @@ class TaskInputCard extends StatelessWidget {
   final Function(double) onCuttingVolumeChange;
   final Function(double) onClearCuttingAreaChange;
   final Function(double) onClearCuttingVolumeChange;
+  final Function(double) onClearingAreaChange;
+  final Function(double) onClearingVolumeChange;
+  final Function(double) onPanelsQuantityChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -64,6 +72,9 @@ class TaskInputCard extends StatelessWidget {
     this.cuttingVolume,
     this.clearCuttingArea,
     this.clearCuttingVolume,
+    this.clearingArea,
+    this.clearingVolume,
+    this.panelsQuantity,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
@@ -80,6 +91,9 @@ class TaskInputCard extends StatelessWidget {
     required this.onCuttingVolumeChange,
     required this.onClearCuttingAreaChange,
     required this.onClearCuttingVolumeChange,
+    required this.onClearingAreaChange,
+    required this.onClearingVolumeChange,
+    required this.onPanelsQuantityChange,
     required this.onDelete,
   });
 
@@ -112,6 +126,8 @@ class TaskInputCard extends StatelessWidget {
             if (title == 'Посев') _buildSowingFields(),
             if (title == 'Выборочная санитарная рубка') _buildCuttingFields(),
             if (title == 'Сплошная санитарная рубка') _buildClearCuttingFields(),
+            if (title == 'Уборка захламленности') _buildClearingFields(),
+            if (title == 'Установка панно и аншлагов') _buildPanelsField(),
             _buildDependsField(),
           ],
         ),
@@ -348,6 +364,49 @@ class TaskInputCard extends StatelessWidget {
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildClearingFields() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: clearingArea != null ? clearingArea!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
+                onChanged: (v) => onClearingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: clearingVolume != null ? clearingVolume!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
+                onChanged: (v) => onClearingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildPanelsField() {
+    return Column(
+      children: [
+        TextFormField(
+          initialValue: panelsQuantity != null ? panelsQuantity!.toString() : '',
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Штуки', isDense: true),
+          onChanged: (v) => onPanelsQuantityChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
         ),
         const SizedBox(height: 8),
       ],

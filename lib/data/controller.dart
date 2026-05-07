@@ -213,6 +213,24 @@ class ExecutorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTaskClearingArea(int index, double value) {
+    tasks[index].clearingArea = value;
+    saveData();
+    notifyListeners();
+  }
+
+  void updateTaskClearingVolume(int index, double value) {
+    tasks[index].clearingVolume = value;
+    saveData();
+    notifyListeners();
+  }
+
+  void updateTaskPanelsQuantity(int index, double value) {
+    tasks[index].panelsQuantity = value;
+    saveData();
+    notifyListeners();
+  }
+
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -267,6 +285,13 @@ class ExecutorController extends ChangeNotifier {
       if (t.name == 'Сплошная санитарная рубка') {
         map['clearCuttingArea'] = t.clearCuttingArea as dynamic;
         map['clearCuttingVolume'] = t.clearCuttingVolume as dynamic;
+      }
+      if (t.name == 'Уборка захламленности') {
+        map['clearingArea'] = t.clearingArea as dynamic;
+        map['clearingVolume'] = t.clearingVolume as dynamic;
+      }
+      if (t.name == 'Установка панно и аншлагов') {
+        map['panelsQuantity'] = t.panelsQuantity as dynamic;
       }
       return map;
     }).toList();

@@ -34,6 +34,11 @@ class SimulationTask {
   // поле для Установки панно и аншлагов
   double? panelsQuantity;
 
+  // новые общие поля
+  String? location;   // "Где?" (для Посадки и Посева)
+  String? quarter;    // Квартал
+  String? allotment;  // Выдел
+
   SimulationTask({
     required this.id,
     required this.name,
@@ -57,6 +62,9 @@ class SimulationTask {
     this.clearingArea,
     this.clearingVolume,
     this.panelsQuantity,
+    this.location,
+    this.quarter,
+    this.allotment,
   });
 
   Map<String, dynamic> toMap() => {
@@ -82,6 +90,9 @@ class SimulationTask {
     if (clearingArea != null) 'clearingArea': clearingArea,
     if (clearingVolume != null) 'clearingVolume': clearingVolume,
     if (panelsQuantity != null) 'panelsQuantity': panelsQuantity,
+    if (location != null) 'location': location,
+    if (quarter != null) 'quarter': quarter,
+    if (allotment != null) 'allotment': allotment,
   };
 
   factory SimulationTask.fromMap(Map<dynamic, dynamic> map) => SimulationTask(
@@ -107,6 +118,9 @@ class SimulationTask {
     clearingArea: map['clearingArea']?.toDouble(),
     clearingVolume: map['clearingVolume']?.toDouble(),
     panelsQuantity: map['panelsQuantity']?.toDouble(),
+    location: map['location'],
+    quarter: map['quarter'],
+    allotment: map['allotment'],
   );
 
   double getSample(Random rnd) {

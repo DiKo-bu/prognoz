@@ -234,6 +234,24 @@ class ExecutorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTaskLocation(int index, String value) {
+    tasks[index].location = value;
+    saveData();
+    notifyListeners();
+  }
+
+  void updateTaskQuarter(int index, String value) {
+    tasks[index].quarter = value;
+    saveData();
+    notifyListeners();
+  }
+
+  void updateTaskAllotment(int index, String value) {
+    tasks[index].allotment = value;
+    saveData();
+    notifyListeners();
+  }
+
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -269,6 +287,10 @@ class ExecutorController extends ChangeNotifier {
         'dependsOn': t.dependsOn,
         'workType': t.name,
         'executor': currentExecutor,
+        // включаем location/quarter/allotment для всех типов
+        if (t.location != null) 'location': t.location,
+        if (t.quarter != null) 'quarter': t.quarter,
+        if (t.allotment != null) 'allotment': t.allotment,
       };
       if (t.name == 'Посадка') {
         map['plantingType'] = t.plantingType as dynamic;

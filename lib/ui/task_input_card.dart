@@ -7,6 +7,8 @@ import 'widgets/task_fields/cutting_fields.dart';
 import 'widgets/task_fields/clear_cutting_fields.dart';
 import 'widgets/task_fields/clearing_fields.dart';
 import 'widgets/task_fields/panels_field.dart';
+import 'widgets/task_fields/location_field.dart';
+import 'widgets/task_fields/quarter_allotment_fields.dart';
 
 class TaskInputCard extends StatelessWidget {
   final String id;
@@ -35,6 +37,10 @@ class TaskInputCard extends StatelessWidget {
   final double? clearingVolume;
   // Установка панно и аншлагов
   final double? panelsQuantity;
+  // Новые поля
+  final String? location;
+  final String? quarter;
+  final String? allotment;
 
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
@@ -55,6 +61,9 @@ class TaskInputCard extends StatelessWidget {
   final Function(double) onClearingAreaChange;
   final Function(double) onClearingVolumeChange;
   final Function(double) onPanelsQuantityChange;
+  final Function(String) onLocationChange;
+  final Function(String) onQuarterChange;
+  final Function(String) onAllotmentChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -81,6 +90,9 @@ class TaskInputCard extends StatelessWidget {
     this.clearingArea,
     this.clearingVolume,
     this.panelsQuantity,
+    this.location,
+    this.quarter,
+    this.allotment,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
@@ -100,6 +112,9 @@ class TaskInputCard extends StatelessWidget {
     required this.onClearingAreaChange,
     required this.onClearingVolumeChange,
     required this.onPanelsQuantityChange,
+    required this.onLocationChange,
+    required this.onQuarterChange,
+    required this.onAllotmentChange,
     required this.onDelete,
   });
 
@@ -128,7 +143,7 @@ class TaskInputCard extends StatelessWidget {
             _buildDurationFields(isCompleted),
             if (showError) _ratioError,
             const SizedBox(height: 8),
-            if (title == 'Посадка')
+            if (title == 'Посадка') ...[
               PlantingFields(
                 plantingType: plantingType,
                 culture: culture,
@@ -139,7 +154,9 @@ class TaskInputCard extends StatelessWidget {
                 onPlantingQuantityChange: onPlantingQuantityChange,
                 onPlantingAreaChange: onPlantingAreaChange,
               ),
-            if (title == 'Посев')
+              LocationField(location: location, onChanged: onLocationChange),
+            ],
+            if (title == 'Посев') ...[
               SowingFields(
                 sowingBreed: sowingBreed,
                 sowingQuantityKg: sowingQuantityKg,
@@ -148,32 +165,62 @@ class TaskInputCard extends StatelessWidget {
                 onSowingQuantityKgChange: onSowingQuantityKgChange,
                 onSowingAreaHaChange: onSowingAreaHaChange,
               ),
-            if (title == 'Выборочная санитарная рубка')
+              LocationField(location: location, onChanged: onLocationChange),
+            ],
+            if (title == 'Выборочная санитарная рубка') ...[
               CuttingFields(
                 cuttingArea: cuttingArea,
                 cuttingVolume: cuttingVolume,
                 onCuttingAreaChange: onCuttingAreaChange,
                 onCuttingVolumeChange: onCuttingVolumeChange,
               ),
-            if (title == 'Сплошная санитарная рубка')
+              QuarterAllotmentFields(
+                quarter: quarter,
+                allotment: allotment,
+                onQuarterChanged: onQuarterChange,
+                onAllotmentChanged: onAllotmentChange,
+              ),
+            ],
+            if (title == 'Сплошная санитарная рубка') ...[
               ClearCuttingFields(
                 clearCuttingArea: clearCuttingArea,
                 clearCuttingVolume: clearCuttingVolume,
                 onClearCuttingAreaChange: onClearCuttingAreaChange,
                 onClearCuttingVolumeChange: onClearCuttingVolumeChange,
               ),
-            if (title == 'Уборка захламленности')
+              QuarterAllotmentFields(
+                quarter: quarter,
+                allotment: allotment,
+                onQuarterChanged: onQuarterChange,
+                onAllotmentChanged: onAllotmentChange,
+              ),
+            ],
+            if (title == 'Уборка захламленности') ...[
               ClearingFields(
                 clearingArea: clearingArea,
                 clearingVolume: clearingVolume,
                 onClearingAreaChange: onClearingAreaChange,
                 onClearingVolumeChange: onClearingVolumeChange,
               ),
-            if (title == 'Установка панно и аншлагов')
+              QuarterAllotmentFields(
+                quarter: quarter,
+                allotment: allotment,
+                onQuarterChanged: onQuarterChange,
+                onAllotmentChanged: onAllotmentChange,
+              ),
+            ],
+            if (title == 'Установка панно и аншлагов') ...[
               PanelsField(
                 panelsQuantity: panelsQuantity,
                 onPanelsQuantityChange: onPanelsQuantityChange,
               ),
+              QuarterAllotmentFields(
+                quarter: quarter,
+                allotment: allotment,
+                onQuarterChanged: onQuarterChange,
+                onAllotmentChanged: onAllotmentChange,
+              ),
+            ],
             _buildDependsField(),
           ],
         ),

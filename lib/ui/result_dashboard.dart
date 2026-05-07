@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/controller.dart';
-import '../logic/engine.dart';
+import '../logic/gantt_task_data.dart';
+import '../logic/risk_impact.dart';
 import 'gantt_chart.dart';
 
 class ResultDashboardScreen extends StatelessWidget {

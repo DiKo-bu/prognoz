@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../logic/engine.dart';
+import '../logic/simulation_task.dart';
 import 'constants.dart';
 
 class TaskInputCard extends StatelessWidget {

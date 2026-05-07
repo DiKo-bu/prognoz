@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
-import '../logic/engine.dart';
+import '../logic/gantt_task_data.dart';
 
 class GanttChart extends StatelessWidget {
   final Map<String, GanttTaskData> data;

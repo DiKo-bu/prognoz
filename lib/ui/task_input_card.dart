@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../logic/simulation_task.dart';
 import 'constants.dart';
+import 'widgets/task_fields/planting_fields.dart';
+import 'widgets/task_fields/sowing_fields.dart';
+import 'widgets/task_fields/cutting_fields.dart';
+import 'widgets/task_fields/clear_cutting_fields.dart';
+import 'widgets/task_fields/clearing_fields.dart';
+import 'widgets/task_fields/panels_field.dart';
 
 class TaskInputCard extends StatelessWidget {
   final String id;
@@ -122,12 +128,52 @@ class TaskInputCard extends StatelessWidget {
             _buildDurationFields(isCompleted),
             if (showError) _ratioError,
             const SizedBox(height: 8),
-            if (title == 'Посадка') _buildPlantingFields(),
-            if (title == 'Посев') _buildSowingFields(),
-            if (title == 'Выборочная санитарная рубка') _buildCuttingFields(),
-            if (title == 'Сплошная санитарная рубка') _buildClearCuttingFields(),
-            if (title == 'Уборка захламленности') _buildClearingFields(),
-            if (title == 'Установка панно и аншлагов') _buildPanelsField(),
+            if (title == 'Посадка')
+              PlantingFields(
+                plantingType: plantingType,
+                culture: culture,
+                plantingQuantity: plantingQuantity,
+                plantingArea: plantingArea,
+                onPlantingTypeChange: onPlantingTypeChange,
+                onCultureChange: onCultureChange,
+                onPlantingQuantityChange: onPlantingQuantityChange,
+                onPlantingAreaChange: onPlantingAreaChange,
+              ),
+            if (title == 'Посев')
+              SowingFields(
+                sowingBreed: sowingBreed,
+                sowingQuantityKg: sowingQuantityKg,
+                sowingAreaHa: sowingAreaHa,
+                onSowingBreedChange: onSowingBreedChange,
+                onSowingQuantityKgChange: onSowingQuantityKgChange,
+                onSowingAreaHaChange: onSowingAreaHaChange,
+              ),
+            if (title == 'Выборочная санитарная рубка')
+              CuttingFields(
+                cuttingArea: cuttingArea,
+                cuttingVolume: cuttingVolume,
+                onCuttingAreaChange: onCuttingAreaChange,
+                onCuttingVolumeChange: onCuttingVolumeChange,
+              ),
+            if (title == 'Сплошная санитарная рубка')
+              ClearCuttingFields(
+                clearCuttingArea: clearCuttingArea,
+                clearCuttingVolume: clearCuttingVolume,
+                onClearCuttingAreaChange: onClearCuttingAreaChange,
+                onClearCuttingVolumeChange: onClearCuttingVolumeChange,
+              ),
+            if (title == 'Уборка захламленности')
+              ClearingFields(
+                clearingArea: clearingArea,
+                clearingVolume: clearingVolume,
+                onClearingAreaChange: onClearingAreaChange,
+                onClearingVolumeChange: onClearingVolumeChange,
+              ),
+            if (title == 'Установка панно и аншлагов')
+              PanelsField(
+                panelsQuantity: panelsQuantity,
+                onPanelsQuantityChange: onPanelsQuantityChange,
+              ),
             _buildDependsField(),
           ],
         ),
@@ -224,194 +270,6 @@ class TaskInputCard extends StatelessWidget {
         child: Text("Ошибка: должно быть Мин <= Норма <= Макс",
             style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
       );
-
-  Widget _buildPlantingFields() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: plantingType,
-                decoration: const InputDecoration(labelText: 'Вид', isDense: true),
-                items: plantingTypes.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: onPlantingTypeChange,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                value: culture,
-                decoration: const InputDecoration(labelText: 'Культура', isDense: true),
-                items: cultures.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                onChanged: onCultureChange,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: plantingQuantity != null ? plantingQuantity!.toString().replaceAll(RegExp(r'\.0$'), '') : '',
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Кол-во, шт', isDense: true),
-                onChanged: (v) => onPlantingQuantityChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextFormField(
-                initialValue: plantingArea != null ? plantingArea!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
-                onChanged: (v) => onPlantingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _buildSowingFields() {
-    return Column(
-      children: [
-        DropdownButtonFormField<String>(
-          value: sowingBreed,
-          decoration: const InputDecoration(labelText: 'Порода', isDense: true),
-          items: sowingBreeds.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: onSowingBreedChange,
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: sowingQuantityKg != null ? sowingQuantityKg!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Количество, кг', isDense: true),
-                onChanged: (v) => onSowingQuantityKgChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextFormField(
-                initialValue: sowingAreaHa != null ? sowingAreaHa!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
-                onChanged: (v) => onSowingAreaHaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _buildCuttingFields() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: cuttingArea != null ? cuttingArea!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
-                onChanged: (v) => onCuttingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextFormField(
-                initialValue: cuttingVolume != null ? cuttingVolume!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
-                onChanged: (v) => onCuttingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _buildClearCuttingFields() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: clearCuttingArea != null ? clearCuttingArea!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
-                onChanged: (v) => onClearCuttingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextFormField(
-                initialValue: clearCuttingVolume != null ? clearCuttingVolume!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
-                onChanged: (v) => onClearCuttingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _buildClearingFields() {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: clearingArea != null ? clearingArea!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
-                onChanged: (v) => onClearingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: TextFormField(
-                initialValue: clearingVolume != null ? clearingVolume!.toString() : '',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
-                onChanged: (v) => onClearingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
-
-  Widget _buildPanelsField() {
-    return Column(
-      children: [
-        TextFormField(
-          initialValue: panelsQuantity != null ? panelsQuantity!.toString() : '',
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Штуки', isDense: true),
-          onChanged: (v) => onPanelsQuantityChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
-        ),
-        const SizedBox(height: 8),
-      ],
-    );
-  }
 
   Widget _buildDependsField() {
     return TextFormField(

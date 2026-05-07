@@ -72,7 +72,7 @@ class TaskInputCard extends StatelessWidget {
             _buildHeader(isOverMax, isCompleted, showError),
             _buildCompletionRow(isOverMax),
             if (isOverMax) _overMaxWarning,
-            _buildDurationFields(isCompleted, showError),
+            _buildDurationFields(isCompleted),
             if (showError) _ratioError,
             const SizedBox(height: 8),
             if (title == 'Посадка') _buildPlantingFields(),
@@ -150,7 +150,7 @@ class TaskInputCard extends StatelessWidget {
             style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
       );
 
-  Widget _buildDurationFields(bool isCompleted, bool showError) {
+  Widget _buildDurationFields(bool isCompleted) {
     return IgnorePointer(
       ignoring: isCompleted,
       child: Opacity(

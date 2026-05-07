@@ -121,7 +121,7 @@ class ExecutorController extends ChangeNotifier {
   void updateTaskTitle(int index, String title) {
     tasks[index].name = title;
     saveData();
-    notifyListeners();   // ← теперь карточка обновится при смене названия
+    notifyListeners();
   }
 
   void updateTaskValues(int index, String key, double val) {
@@ -150,7 +150,7 @@ class ExecutorController extends ChangeNotifier {
   void updateTaskPlantingType(int index, String? value) {
     tasks[index].plantingType = value;
     saveData();
-    notifyListeners();   // перерисовка карточки
+    notifyListeners();
   }
 
   void updateTaskCulture(int index, String? value) {

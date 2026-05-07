@@ -9,10 +9,16 @@ class TaskInputCard extends StatelessWidget {
   final String currentDepends;
   final bool isCompleted;
   final double actualDuration;
+  // Посадка
   final String? plantingType;
   final String? culture;
   final double? plantingQuantity;
   final double? plantingArea;
+  // Посев
+  final String? sowingBreed;
+  final double? sowingQuantityKg;
+  final double? sowingAreaHa;
+
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
   final Function(String) onTitleChange;
@@ -22,6 +28,9 @@ class TaskInputCard extends StatelessWidget {
   final Function(String?) onCultureChange;
   final Function(double) onPlantingQuantityChange;
   final Function(double) onPlantingAreaChange;
+  final Function(String?) onSowingBreedChange;
+  final Function(double) onSowingQuantityKgChange;
+  final Function(double) onSowingAreaHaChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -38,6 +47,9 @@ class TaskInputCard extends StatelessWidget {
     this.culture,
     this.plantingQuantity,
     this.plantingArea,
+    this.sowingBreed,
+    this.sowingQuantityKg,
+    this.sowingAreaHa,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
@@ -47,6 +59,9 @@ class TaskInputCard extends StatelessWidget {
     required this.onCultureChange,
     required this.onPlantingQuantityChange,
     required this.onPlantingAreaChange,
+    required this.onSowingBreedChange,
+    required this.onSowingQuantityKgChange,
+    required this.onSowingAreaHaChange,
     required this.onDelete,
   });
 
@@ -76,6 +91,7 @@ class TaskInputCard extends StatelessWidget {
             if (showError) _ratioError,
             const SizedBox(height: 8),
             if (title == 'Посадка') _buildPlantingFields(),
+            if (title == 'Посев') _buildSowingFields(),
             _buildDependsField(),
           ],
         ),
@@ -215,6 +231,42 @@ class TaskInputCard extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
                 onChanged: (v) => onPlantingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildSowingFields() {
+    return Column(
+      children: [
+        DropdownButtonFormField<String>(
+          value: sowingBreed,
+          decoration: const InputDecoration(labelText: 'Порода', isDense: true),
+          items: sowingBreeds.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+          onChanged: onSowingBreedChange,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: sowingQuantityKg != null ? sowingQuantityKg!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Количество, кг', isDense: true),
+                onChanged: (v) => onSowingQuantityKgChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: sowingAreaHa != null ? sowingAreaHa!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
+                onChanged: (v) => onSowingAreaHaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
               ),
             ),
           ],

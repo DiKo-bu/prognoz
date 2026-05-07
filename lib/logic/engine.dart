@@ -35,11 +35,16 @@ class SimulationTask {
   bool isCompleted;
   double actualDuration;
 
-  // Поля только для Посадки
-  String? plantingType;   // сеянцы / саженцы / черенки
-  String? culture;        // вяз, тополь, ива, лох, смородина, клен, ясень
-  double? plantingQuantity; // штук
-  double? plantingArea;     // гектаров
+  // поля для Посадки
+  String? plantingType;
+  String? culture;
+  double? plantingQuantity;
+  double? plantingArea;
+
+  // поля для Посева
+  String? sowingBreed;
+  double? sowingQuantityKg;
+  double? sowingAreaHa;
 
   SimulationTask({
     required this.id,
@@ -54,6 +59,9 @@ class SimulationTask {
     this.culture,
     this.plantingQuantity,
     this.plantingArea,
+    this.sowingBreed,
+    this.sowingQuantityKg,
+    this.sowingAreaHa,
   });
 
   Map<String, dynamic> toMap() => {
@@ -69,6 +77,9 @@ class SimulationTask {
     if (culture != null) 'culture': culture,
     if (plantingQuantity != null) 'plantingQuantity': plantingQuantity,
     if (plantingArea != null) 'plantingArea': plantingArea,
+    if (sowingBreed != null) 'sowingBreed': sowingBreed,
+    if (sowingQuantityKg != null) 'sowingQuantityKg': sowingQuantityKg,
+    if (sowingAreaHa != null) 'sowingAreaHa': sowingAreaHa,
   };
 
   factory SimulationTask.fromMap(Map<dynamic, dynamic> map) => SimulationTask(
@@ -84,6 +95,9 @@ class SimulationTask {
     culture: map['culture'],
     plantingQuantity: map['plantingQuantity']?.toDouble(),
     plantingArea: map['plantingArea']?.toDouble(),
+    sowingBreed: map['sowingBreed'],
+    sowingQuantityKg: map['sowingQuantityKg']?.toDouble(),
+    sowingAreaHa: map['sowingAreaHa']?.toDouble(),
   );
 
   double getSample(Random rnd) {

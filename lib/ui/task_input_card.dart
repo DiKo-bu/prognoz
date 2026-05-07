@@ -18,6 +18,9 @@ class TaskInputCard extends StatelessWidget {
   final String? sowingBreed;
   final double? sowingQuantityKg;
   final double? sowingAreaHa;
+  // Выборочная санрубка
+  final double? cuttingArea;
+  final double? cuttingVolume;
 
   final Function(bool) onCompletionChange;
   final Function(double) onActualChange;
@@ -31,6 +34,8 @@ class TaskInputCard extends StatelessWidget {
   final Function(String?) onSowingBreedChange;
   final Function(double) onSowingQuantityKgChange;
   final Function(double) onSowingAreaHaChange;
+  final Function(double) onCuttingAreaChange;
+  final Function(double) onCuttingVolumeChange;
   final VoidCallback onDelete;
 
   const TaskInputCard({
@@ -50,6 +55,8 @@ class TaskInputCard extends StatelessWidget {
     this.sowingBreed,
     this.sowingQuantityKg,
     this.sowingAreaHa,
+    this.cuttingArea,
+    this.cuttingVolume,
     required this.onCompletionChange,
     required this.onActualChange,
     required this.onTitleChange,
@@ -62,6 +69,8 @@ class TaskInputCard extends StatelessWidget {
     required this.onSowingBreedChange,
     required this.onSowingQuantityKgChange,
     required this.onSowingAreaHaChange,
+    required this.onCuttingAreaChange,
+    required this.onCuttingVolumeChange,
     required this.onDelete,
   });
 
@@ -92,6 +101,7 @@ class TaskInputCard extends StatelessWidget {
             const SizedBox(height: 8),
             if (title == 'Посадка') _buildPlantingFields(),
             if (title == 'Посев') _buildSowingFields(),
+            if (title == 'Выборочная санитарная рубка') _buildCuttingFields(),
             _buildDependsField(),
           ],
         ),
@@ -267,6 +277,35 @@ class TaskInputCard extends StatelessWidget {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
                 onChanged: (v) => onSowingAreaHaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildCuttingFields() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                initialValue: cuttingArea != null ? cuttingArea!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Площадь, га', isDense: true),
+                onChanged: (v) => onCuttingAreaChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextFormField(
+                initialValue: cuttingVolume != null ? cuttingVolume!.toString() : '',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Объём, м³', isDense: true),
+                onChanged: (v) => onCuttingVolumeChange(double.tryParse(v.replaceAll(',', '.')) ?? 0),
               ),
             ),
           ],

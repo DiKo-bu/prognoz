@@ -185,6 +185,8 @@ class _HomePageState extends State<HomePage> {
                               sowingBreed: task.sowingBreed,
                               sowingQuantityKg: task.sowingQuantityKg,
                               sowingAreaHa: task.sowingAreaHa,
+                              cuttingArea: task.cuttingArea,
+                              cuttingVolume: task.cuttingVolume,
                               onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
                               onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
                               onTitleChange: (v) => _controller.updateTaskTitle(i, v),
@@ -197,6 +199,8 @@ class _HomePageState extends State<HomePage> {
                               onSowingBreedChange: (v) => _controller.updateTaskSowingBreed(i, v),
                               onSowingQuantityKgChange: (v) => _controller.updateTaskSowingQuantityKg(i, v),
                               onSowingAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
+                              onCuttingAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
+                              onCuttingVolumeChange: (v) => _controller.updateTaskCuttingVolume(i, v),
                               onDelete: () => _controller.removeTask(i),
                             );
                           },

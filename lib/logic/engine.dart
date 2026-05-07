@@ -46,6 +46,10 @@ class SimulationTask {
   double? sowingQuantityKg;
   double? sowingAreaHa;
 
+  // поля для Выборочной санитарной рубки
+  double? cuttingArea;
+  double? cuttingVolume;
+
   SimulationTask({
     required this.id,
     required this.name,
@@ -62,6 +66,8 @@ class SimulationTask {
     this.sowingBreed,
     this.sowingQuantityKg,
     this.sowingAreaHa,
+    this.cuttingArea,
+    this.cuttingVolume,
   });
 
   Map<String, dynamic> toMap() => {
@@ -80,6 +86,8 @@ class SimulationTask {
     if (sowingBreed != null) 'sowingBreed': sowingBreed,
     if (sowingQuantityKg != null) 'sowingQuantityKg': sowingQuantityKg,
     if (sowingAreaHa != null) 'sowingAreaHa': sowingAreaHa,
+    if (cuttingArea != null) 'cuttingArea': cuttingArea,
+    if (cuttingVolume != null) 'cuttingVolume': cuttingVolume,
   };
 
   factory SimulationTask.fromMap(Map<dynamic, dynamic> map) => SimulationTask(
@@ -98,6 +106,8 @@ class SimulationTask {
     sowingBreed: map['sowingBreed'],
     sowingQuantityKg: map['sowingQuantityKg']?.toDouble(),
     sowingAreaHa: map['sowingAreaHa']?.toDouble(),
+    cuttingArea: map['cuttingArea']?.toDouble(),
+    cuttingVolume: map['cuttingVolume']?.toDouble(),
   );
 
   double getSample(Random rnd) {

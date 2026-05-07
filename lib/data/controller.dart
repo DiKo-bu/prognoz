@@ -189,6 +189,18 @@ class ExecutorController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateTaskCuttingArea(int index, double value) {
+    tasks[index].cuttingArea = value;
+    saveData();
+    notifyListeners();
+  }
+
+  void updateTaskCuttingVolume(int index, double value) {
+    tasks[index].cuttingVolume = value;
+    saveData();
+    notifyListeners();
+  }
+
   void importProgressFromJson(String jsonString) {
     try {
       Map<String, dynamic> incomingData = jsonDecode(jsonString);
@@ -235,6 +247,10 @@ class ExecutorController extends ChangeNotifier {
         map['sowingBreed'] = t.sowingBreed as dynamic;
         map['sowingQuantityKg'] = t.sowingQuantityKg as dynamic;
         map['sowingAreaHa'] = t.sowingAreaHa as dynamic;
+      }
+      if (t.name == 'Выборочная санитарная рубка') {
+        map['cuttingArea'] = t.cuttingArea as dynamic;
+        map['cuttingVolume'] = t.cuttingVolume as dynamic;
       }
       return map;
     }).toList();

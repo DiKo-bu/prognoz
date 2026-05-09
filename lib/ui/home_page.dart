@@ -4,6 +4,7 @@ import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
 import 'result_dashboard.dart';
+import 'completed_tasks_view.dart';
 import 'callbacks/planting_callbacks.dart';
 import 'callbacks/sowing_callbacks.dart';
 import 'callbacks/selective_cutting_callbacks.dart';
@@ -60,11 +61,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _controller.importProgressFromJson(importCtrl.text);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Отчет принят, график перестроен')),
+                const SnackBar(content: Text('Отчет принят, данные обновлены')),
               );
-              _tabController.animateTo(1);
+              _tabController.animateTo(1); // переключаем на Результат
             },
-            child: const Text('ОБНОВИТЬ ГРАФИК'),
+            child: const Text('ОБНОВИТЬ ДАННЫЕ'),
           ),
         ],
       ),
@@ -85,9 +86,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_controller.resultText)),
       );
-    } else {
-      _tabController.animateTo(1);
     }
+    // Остаёмся на вкладке Результат (уже там)
   }
 
   @override
@@ -167,7 +167,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           body: TabBarView(
             controller: _tabController,
             children: [
-              // План
+              // Вкладка ПЛАН
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 child: Column(
@@ -302,8 +302,13 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ],
                 ),
               ),
-              // Результат
-              ResultDashboard(controller: _controller),
+              // Вкладка РЕЗУЛЬТАТ
+              _controller.ganttData.isNotEmpty
+                  ? ResultDashboard(controller: _controller)
+                  : CompletedTasksView(
+                      tasks: _controller.tasks,
+                      startDate: _controller.startDate,
+                    ),
             ],
           ),
         );

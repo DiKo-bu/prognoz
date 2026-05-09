@@ -4,6 +4,14 @@ import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
 import 'result_dashboard.dart';
+import 'callbacks/planting_callbacks.dart';
+import 'callbacks/sowing_callbacks.dart';
+import 'callbacks/selective_cutting_callbacks.dart';
+import 'callbacks/clear_cutting_callbacks.dart';
+import 'callbacks/clearing_callbacks.dart';
+import 'callbacks/panels_callbacks.dart';
+import 'callbacks/general_field_callbacks.dart';
+import 'callbacks/base_task_callbacks.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,10 +27,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      // перестраиваем AppBar при смене вкладки (меняется набор кнопок)
-      setState(() {});
-    });
+    _tabController.addListener(() => setState(() {}));
     _controller.init();
   }
 
@@ -57,7 +62,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Отчет принят, график перестроен')),
               );
-              _tabController.animateTo(1); // переключить на Результат
+              _tabController.animateTo(1);
             },
             child: const Text('ОБНОВИТЬ ГРАФИК'),
           ),
@@ -81,7 +86,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         SnackBar(content: Text(_controller.resultText)),
       );
     } else {
-      _tabController.animateTo(1); // переключить на Результат
+      _tabController.animateTo(1);
     }
   }
 
@@ -126,26 +131,22 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
             actions: [
               if (isPlanTab) ...[
-                // Кнопка экспорта плана (стрелка вверх)
                 IconButton(
                   icon: const Icon(Icons.upload, color: Colors.red),
                   tooltip: 'Экспорт плана',
                   onPressed: _exportPlan,
                 ),
-                // Кнопка добавления этапа
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   onPressed: _controller.addTask,
                 ),
               ],
               if (isResultTab) ...[
-                // Кнопка моделирования (видна только на Результате)
                 IconButton(
                   icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
                   tooltip: 'Выполнить моделирование',
                   onPressed: _runModeling,
                 ),
-                // Кнопка импорта отчёта
                 IconButton(
                   icon: const Icon(Icons.download_for_offline, color: Colors.green),
                   tooltip: 'Принять отчёт',
@@ -166,7 +167,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           body: TabBarView(
             controller: _tabController,
             children: [
-              // Вкладка ПЛАН
+              // План
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 child: Column(
@@ -201,18 +202,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     ),
                     Expanded(
                       child: _controller.tasks.isEmpty
-                          ? const Center(child: Text("Нет этапов. Нажмите '+' вверху экрана.", style: TextStyle(color: Colors.grey)))
+                          ? const Center(child: Text("Нет этапов. Нажмите '+' вверху экрана.",
+                              style: TextStyle(color: Colors.grey)))
                           : ListView.builder(
                               itemCount: _controller.tasks.length,
                               itemBuilder: (context, i) {
-                                var task = _controller.tasks[i];
+                                final task = _controller.tasks[i];
                                 return TaskInputCard(
                                   id: task.id,
                                   title: task.name,
-                                  currentMin: task.min,
-                                  currentLikely: task.likely,
-                                  currentMax: task.max,
-                                  currentDepends: task.dependsOn.join(', '),
+                                  min: task.min,
+                                  likely: task.likely,
+                                  max: task.max,
+                                  depends: task.dependsOn.join(', '),
                                   isCompleted: task.isCompleted,
                                   actualDuration: task.actualDuration,
                                   actualEndDate: task.actualEndDate,
@@ -234,29 +236,65 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                   location: task.location,
                                   quarter: task.quarter,
                                   allotment: task.allotment,
-                                  onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
-                                  onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
-                                  onTitleChange: (v) => _controller.updateTaskTitle(i, v),
-                                  onUpdate: (key, val) => _controller.updateTaskValues(i, key, val),
-                                  onDependsChange: (val) => _controller.updateTaskDepends(i, val),
-                                  onPlantingTypeChange: (v) => _controller.updateTaskPlantingType(i, v),
-                                  onCultureChange: (v) => _controller.updateTaskCulture(i, v),
-                                  onPlantingQuantityChange: (v) => _controller.updateTaskPlantingQuantity(i, v),
-                                  onPlantingAreaChange: (v) => _controller.updateTaskPlantingArea(i, v),
-                                  onSowingBreedChange: (v) => _controller.updateTaskSowingBreed(i, v),
-                                  onSowingQuantityKgChange: (v) => _controller.updateTaskSowingQuantityKg(i, v),
-                                  onSowingAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
-                                  onCuttingAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
-                                  onCuttingVolumeChange: (v) => _controller.updateTaskCuttingVolume(i, v),
-                                  onClearCuttingAreaChange: (v) => _controller.updateTaskClearCuttingArea(i, v),
-                                  onClearCuttingVolumeChange: (v) => _controller.updateTaskClearCuttingVolume(i, v),
-                                  onClearingAreaChange: (v) => _controller.updateTaskClearingArea(i, v),
-                                  onClearingVolumeChange: (v) => _controller.updateTaskClearingVolume(i, v),
-                                  onPanelsQuantityChange: (v) => _controller.updateTaskPanelsQuantity(i, v),
-                                  onLocationChange: (v) => _controller.updateTaskLocation(i, v),
-                                  onQuarterChange: (v) => _controller.updateTaskQuarter(i, v),
-                                  onAllotmentChange: (v) => _controller.updateTaskAllotment(i, v),
-                                  onDelete: () => _controller.removeTask(i),
+                                  base: BaseTaskCallbacks(
+                                    onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
+                                    onActualDurationChange: (v) => _controller.updateTaskActualDuration(i, v),
+                                    onTitleChange: (v) => _controller.updateTaskTitle(i, v),
+                                    onDurationValuesChange: (key, val) =>
+                                        _controller.updateTaskValues(i, key, val),
+                                    onDependsChange: (val) => _controller.updateTaskDepends(i, val),
+                                    onDelete: () => _controller.removeTask(i),
+                                  ),
+                                  planting: task.name == 'Посадка'
+                                      ? PlantingCallbacks(
+                                          onTypeChange: (v) => _controller.updateTaskPlantingType(i, v),
+                                          onCultureChange: (v) => _controller.updateTaskCulture(i, v),
+                                          onQuantityChange: (v) =>
+                                              _controller.updateTaskPlantingQuantity(i, v),
+                                          onAreaChange: (v) => _controller.updateTaskPlantingArea(i, v),
+                                        )
+                                      : null,
+                                  sowing: task.name == 'Посев'
+                                      ? SowingCallbacks(
+                                          onBreedChange: (v) => _controller.updateTaskSowingBreed(i, v),
+                                          onQuantityKgChange: (v) =>
+                                              _controller.updateTaskSowingQuantityKg(i, v),
+                                          onAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
+                                        )
+                                      : null,
+                                  selectiveCutting: task.name == 'Выборочная санитарная рубка'
+                                      ? SelectiveCuttingCallbacks(
+                                          onAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
+                                          onVolumeChange: (v) =>
+                                              _controller.updateTaskCuttingVolume(i, v),
+                                        )
+                                      : null,
+                                  clearCutting: task.name == 'Сплошная санитарная рубка'
+                                      ? ClearCuttingCallbacks(
+                                          onAreaChange: (v) =>
+                                              _controller.updateTaskClearCuttingArea(i, v),
+                                          onVolumeChange: (v) =>
+                                              _controller.updateTaskClearCuttingVolume(i, v),
+                                        )
+                                      : null,
+                                  clearing: task.name == 'Уборка захламленности'
+                                      ? ClearingCallbacks(
+                                          onAreaChange: (v) => _controller.updateTaskClearingArea(i, v),
+                                          onVolumeChange: (v) =>
+                                              _controller.updateTaskClearingVolume(i, v),
+                                        )
+                                      : null,
+                                  panels: task.name == 'Установка панно и аншлагов'
+                                      ? PanelsCallbacks(
+                                          onQuantityChange: (v) =>
+                                              _controller.updateTaskPanelsQuantity(i, v),
+                                        )
+                                      : null,
+                                  general: GeneralFieldCallbacks(
+                                    onLocationChange: (v) => _controller.updateTaskLocation(i, v),
+                                    onQuarterChange: (v) => _controller.updateTaskQuarter(i, v),
+                                    onAllotmentChange: (v) => _controller.updateTaskAllotment(i, v),
+                                  ),
                                 );
                               },
                             ),
@@ -264,7 +302,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ],
                 ),
               ),
-              // Вкладка РЕЗУЛЬТАТ
+              // Результат
               ResultDashboard(controller: _controller),
             ],
           ),

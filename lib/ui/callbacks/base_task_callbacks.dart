@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart';
+
 class BaseTaskCallbacks {
   final Function(bool) onCompletionChange;
   final Function(double) onActualDurationChange;
   final Function(String) onTitleChange;
-  final Function(String, double) onDurationValuesChange; // min/likely/max
+  final Function(String, double) onDurationValuesChange;
   final Function(String) onDependsChange;
   final VoidCallback onDelete;
 

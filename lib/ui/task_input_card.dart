@@ -17,6 +17,9 @@ class TaskInputCard extends StatelessWidget {
   final String currentDepends;
   final bool isCompleted;
   final double actualDuration;
+  final DateTime? actualEndDate;          // новое
+  final DateTime projectStartDate;        // нужно для расчёта планового окончания
+
   // Посадка
   final String? plantingType;
   final String? culture;
@@ -76,6 +79,8 @@ class TaskInputCard extends StatelessWidget {
     required this.currentDepends,
     required this.isCompleted,
     required this.actualDuration,
+    this.actualEndDate,
+    required this.projectStartDate,
     this.plantingType,
     this.culture,
     this.plantingQuantity,
@@ -125,21 +130,26 @@ class TaskInputCard extends StatelessWidget {
     final bool showError = isInvalid && notEmpty;
     final bool isOverMax = isCompleted && actualDuration > currentMax;
 
+    // Проверка срыва срока
+    DateTime plannedEnd = projectStartDate.add(Duration(days: currentLikely.toInt()));
+    bool deadlineViolation = isCompleted && actualEndDate != null && actualEndDate!.isAfter(plannedEnd);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       elevation: 2,
-      shape: showError || isOverMax
+      shape: showError || isOverMax || deadlineViolation
           ? RoundedRectangleBorder(
-              side: BorderSide(color: showError ? Colors.red : Colors.orange, width: 2),
+              side: BorderSide(color: showError ? Colors.red : (deadlineViolation ? Colors.red : Colors.orange), width: 2),
               borderRadius: BorderRadius.circular(4))
           : null,
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            _buildHeader(isOverMax, isCompleted, showError),
+            _buildHeader(isOverMax || deadlineViolation, isCompleted, showError),
             _buildCompletionRow(isOverMax),
             if (isOverMax) _overMaxWarning,
+            if (deadlineViolation) _deadlineWarning(plannedEnd, actualEndDate!),
             _buildDurationFields(isCompleted),
             if (showError) _ratioError,
             const SizedBox(height: 8),
@@ -228,14 +238,14 @@ class TaskInputCard extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(bool isOverMax, bool isCompleted, bool showError) {
+  Widget _buildHeader(bool isWarning, bool isCompleted, bool showError) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-              color: isOverMax
-                  ? Colors.orange
+              color: isWarning
+                  ? Colors.red
                   : (isCompleted ? Colors.green : (showError ? Colors.red : Colors.blue[700])),
               borderRadius: BorderRadius.circular(4)),
           child: Text(id, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -294,6 +304,17 @@ class TaskInputCard extends StatelessWidget {
         child: Text("⚠️ Превышение максимума!",
             style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
       );
+
+  Widget _deadlineWarning(DateTime planned, DateTime actual) {
+    final fmt = (DateTime d) => "${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}";
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Text(
+        "⚠️ Срыв срока! План: ${fmt(planned)}, Факт: ${fmt(actual)}",
+        style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
 
   Widget _buildDurationFields(bool isCompleted) {
     return IgnorePointer(

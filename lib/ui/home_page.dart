@@ -178,6 +178,8 @@ class _HomePageState extends State<HomePage> {
                               currentDepends: task.dependsOn.join(', '),
                               isCompleted: task.isCompleted,
                               actualDuration: task.actualDuration,
+                              actualEndDate: task.actualEndDate,
+                              projectStartDate: _controller.startDate,
                               plantingType: task.plantingType,
                               culture: task.culture,
                               plantingQuantity: task.plantingQuantity,

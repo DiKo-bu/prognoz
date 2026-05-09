@@ -128,7 +128,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               if (isPlanTab) ...[
                 // Кнопка экспорта плана (стрелка вверх)
                 IconButton(
-                  icon: const Icon(Icons.upload, color: Colors.white),
+                  icon: const Icon(Icons.upload, color: Colors.red),
                   tooltip: 'Экспорт плана',
                   onPressed: _exportPlan,
                 ),

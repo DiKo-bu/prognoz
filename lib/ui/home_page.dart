@@ -19,6 +19,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      // перестраиваем AppBar при смене вкладки (меняется набор кнопок)
+      setState(() {});
+    });
     _controller.init();
   }
 
@@ -110,6 +114,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           );
         }
 
+        final bool isPlanTab = _tabController.index == 0;
+        final bool isResultTab = _tabController.index == 1;
+
         String startDay = _controller.startDate.day.toString().padLeft(2, '0');
         String startMonth = _controller.startDate.month.toString().padLeft(2, '0');
         String startYear = _controller.startDate.year.toString();
@@ -118,14 +125,33 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           appBar: AppBar(
             title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
-                tooltip: 'Выполнить моделирование',
-                onPressed: _runModeling,
-              ),
-              IconButton(icon: const Icon(Icons.upload_file), tooltip: 'Экспорт плана', onPressed: _exportPlan),
-              IconButton(icon: const Icon(Icons.download_for_offline), color: Colors.green, onPressed: _showImportDialog),
-              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _controller.addTask),
+              if (isPlanTab) ...[
+                // Кнопка экспорта плана (стрелка вверх)
+                IconButton(
+                  icon: const Icon(Icons.upload, color: Colors.white),
+                  tooltip: 'Экспорт плана',
+                  onPressed: _exportPlan,
+                ),
+                // Кнопка добавления этапа
+                IconButton(
+                  icon: const Icon(Icons.add_circle_outline),
+                  onPressed: _controller.addTask,
+                ),
+              ],
+              if (isResultTab) ...[
+                // Кнопка моделирования (видна только на Результате)
+                IconButton(
+                  icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
+                  tooltip: 'Выполнить моделирование',
+                  onPressed: _runModeling,
+                ),
+                // Кнопка импорта отчёта
+                IconButton(
+                  icon: const Icon(Icons.download_for_offline, color: Colors.green),
+                  tooltip: 'Принять отчёт',
+                  onPressed: _showImportDialog,
+                ),
+              ],
             ],
             bottom: TabBar(
               controller: _tabController,

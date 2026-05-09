@@ -20,6 +20,10 @@ class ExecutorController extends ChangeNotifier {
   List<RiskImpact> topRisks = [];
   bool isInitialized = false;
 
+  // Новые поля
+  bool hasReport = false;
+  int selectedTab = 0; // 0 – План, 1 – Результат
+
   Future<void> init() async {
     _box = Hive.box('prognoz_box');
     var storedExecutors = _box.get('executors_list');
@@ -43,6 +47,8 @@ class ExecutorController extends ChangeNotifier {
       ganttData = {};
       topRisks = [];
       startDate = DateTime.now();
+      hasReport = false;
+      selectedTab = 0;
       notifyListeners();
       return;
     }
@@ -58,6 +64,8 @@ class ExecutorController extends ChangeNotifier {
     resultText = '';
     ganttData = {};
     topRisks = [];
+    hasReport = tasks.any((t) => t.isCompleted); // если есть завершённые задачи, считаем, что отчёт был
+    selectedTab = 0;
     notifyListeners();
   }
 
@@ -270,6 +278,8 @@ class ExecutorController extends ChangeNotifier {
       }
       if (updated) {
         saveData();
+        hasReport = true;
+        selectedTab = 1; // переключаем на вкладку Результат
         runSimulation();
         notifyListeners();
       }
@@ -277,6 +287,22 @@ class ExecutorController extends ChangeNotifier {
       resultText = "❌ Ошибка импорта: неверный формат отчета.";
       notifyListeners();
     }
+  }
+
+  // Сброс фактических данных (возврат к плану)
+  void clearFactData() {
+    for (var t in tasks) {
+      t.isCompleted = false;
+      t.actualDuration = 0;
+      t.actualEndDate = null;
+    }
+    saveData();
+    hasReport = false;
+    selectedTab = 0;
+    resultText = '';
+    ganttData = {};
+    topRisks = [];
+    notifyListeners();
   }
 
   String exportPlanToJson() {
@@ -349,7 +375,6 @@ class ExecutorController extends ChangeNotifier {
     final baseline = MonteCarloEngine.calculateBaselinePlan(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
 
-    // Проверка срыва сроков
     String deadlineWarnings = '';
     for (var t in tasks) {
       if (t.isCompleted && t.actualEndDate != null) {

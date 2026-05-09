@@ -4,6 +4,7 @@ import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
 import 'result_dashboard.dart';
+import 'result_view.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,19 +12,39 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
+  TabController? _tabController;
 
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_onControllerChanged);
     _controller.init();
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerChanged);
+    _tabController?.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _onControllerChanged() {
+    // когда контроллер инициализирован и появляются вкладки, синхронизируем TabController
+    if (_controller.isInitialized && _controller.hasReport && _tabController == null) {
+      _tabController = TabController(length: 2, vsync: this, initialIndex: _controller.selectedTab);
+      _tabController!.addListener(() {
+        _controller.selectedTab = _tabController!.index;
+      });
+    }
+    // Если hasReport стал false (сброс фактов), удаляем TabController
+    if (!_controller.hasReport && _tabController != null) {
+      _tabController!.dispose();
+      _tabController = null;
+    }
+    setState(() {}); // перестраиваем, чтобы обновить AppBar
   }
 
   void _showImportDialog() {
@@ -111,124 +132,200 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        String startDay = _controller.startDate.day.toString().padLeft(2, '0');
-        String startMonth = _controller.startDate.month.toString().padLeft(2, '0');
-        String startYear = _controller.startDate.year.toString();
+        // Если отчётов нет – показываем только план (без вкладок)
+        if (!_controller.hasReport) {
+          return _buildPlanScaffold();
+        }
 
+        // Есть отчёт – показываем вкладки
         return Scaffold(
           appBar: AppBar(
             title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
-                tooltip: 'Выполнить моделирование',
-                onPressed: _runModeling,
-              ),
-              IconButton(icon: const Icon(Icons.upload_file), tooltip: 'Экспорт плана', onPressed: _exportPlan),
-              IconButton(icon: const Icon(Icons.download_for_offline), color: Colors.green, onPressed: _showImportDialog),
-              IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _controller.addTask),
-            ],
-          ),
-          drawer: ExecutorDrawer(controller: _controller),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  margin: const EdgeInsets.only(bottom: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text("Старт: $startDay.$startMonth.$startYear",
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      TextButton.icon(
-                        icon: const Icon(Icons.calendar_month),
-                        label: const Text("Изменить"),
-                        onPressed: () async {
-                          DateTime? picked = await showDatePicker(
-                            context: context,
-                            initialDate: _controller.startDate,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null) _controller.setStartDate(picked);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: _controller.tasks.isEmpty
-                      ? const Center(child: Text("Нет этапов. Нажмите '+' вверху экрана.", style: TextStyle(color: Colors.grey)))
-                      : ListView.builder(
-                          itemCount: _controller.tasks.length,
-                          itemBuilder: (context, i) {
-                            var task = _controller.tasks[i];
-                            return TaskInputCard(
-                              id: task.id,
-                              title: task.name,
-                              currentMin: task.min,
-                              currentLikely: task.likely,
-                              currentMax: task.max,
-                              currentDepends: task.dependsOn.join(', '),
-                              isCompleted: task.isCompleted,
-                              actualDuration: task.actualDuration,
-                              actualEndDate: task.actualEndDate,
-                              projectStartDate: _controller.startDate,
-                              plantingType: task.plantingType,
-                              culture: task.culture,
-                              plantingQuantity: task.plantingQuantity,
-                              plantingArea: task.plantingArea,
-                              sowingBreed: task.sowingBreed,
-                              sowingQuantityKg: task.sowingQuantityKg,
-                              sowingAreaHa: task.sowingAreaHa,
-                              cuttingArea: task.cuttingArea,
-                              cuttingVolume: task.cuttingVolume,
-                              clearCuttingArea: task.clearCuttingArea,
-                              clearCuttingVolume: task.clearCuttingVolume,
-                              clearingArea: task.clearingArea,
-                              clearingVolume: task.clearingVolume,
-                              panelsQuantity: task.panelsQuantity,
-                              location: task.location,
-                              quarter: task.quarter,
-                              allotment: task.allotment,
-                              onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
-                              onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
-                              onTitleChange: (v) => _controller.updateTaskTitle(i, v),
-                              onUpdate: (key, val) => _controller.updateTaskValues(i, key, val),
-                              onDependsChange: (val) => _controller.updateTaskDepends(i, val),
-                              onPlantingTypeChange: (v) => _controller.updateTaskPlantingType(i, v),
-                              onCultureChange: (v) => _controller.updateTaskCulture(i, v),
-                              onPlantingQuantityChange: (v) => _controller.updateTaskPlantingQuantity(i, v),
-                              onPlantingAreaChange: (v) => _controller.updateTaskPlantingArea(i, v),
-                              onSowingBreedChange: (v) => _controller.updateTaskSowingBreed(i, v),
-                              onSowingQuantityKgChange: (v) => _controller.updateTaskSowingQuantityKg(i, v),
-                              onSowingAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
-                              onCuttingAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
-                              onCuttingVolumeChange: (v) => _controller.updateTaskCuttingVolume(i, v),
-                              onClearCuttingAreaChange: (v) => _controller.updateTaskClearCuttingArea(i, v),
-                              onClearCuttingVolumeChange: (v) => _controller.updateTaskClearCuttingVolume(i, v),
-                              onClearingAreaChange: (v) => _controller.updateTaskClearingArea(i, v),
-                              onClearingVolumeChange: (v) => _controller.updateTaskClearingVolume(i, v),
-                              onPanelsQuantityChange: (v) => _controller.updateTaskPanelsQuantity(i, v),
-                              onLocationChange: (v) => _controller.updateTaskLocation(i, v),
-                              onQuarterChange: (v) => _controller.updateTaskQuarter(i, v),
-                              onAllotmentChange: (v) => _controller.updateTaskAllotment(i, v),
-                              onDelete: () => _controller.removeTask(i),
-                            );
-                          },
-                        ),
-                ),
+            bottom: TabBar(
+              controller: _tabController,
+              tabs: const [
+                Tab(text: 'План'),
+                Tab(text: 'Результат'),
               ],
             ),
+            actions: _buildAppBarActions(),
+          ),
+          drawer: ExecutorDrawer(controller: _controller),
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildPlanTab(),
+              _buildResultTab(),
+            ],
           ),
         );
       },
+    );
+  }
+
+  List<Widget> _buildAppBarActions() {
+    if (_tabController == null || _tabController!.index == 0) {
+      // Вкладка План
+      return [
+        IconButton(
+          icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
+          tooltip: 'Выполнить моделирование',
+          onPressed: _runModeling,
+        ),
+        IconButton(icon: const Icon(Icons.upload_file), tooltip: 'Экспорт плана', onPressed: _exportPlan),
+        IconButton(icon: const Icon(Icons.download_for_offline), color: Colors.green, onPressed: _showImportDialog),
+        IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _controller.addTask),
+      ];
+    } else {
+      // Вкладка Результат
+      return [
+        IconButton(icon: const Icon(Icons.download_for_offline), color: Colors.green, onPressed: _showImportDialog),
+        IconButton(
+          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          tooltip: 'Сбросить факт',
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Сброс фактических данных'),
+                content: const Text('Все отметки о выполнении будут удалены. Продолжить?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+                  ElevatedButton(
+                    onPressed: () {
+                      _controller.clearFactData();
+                      Navigator.pop(ctx);
+                    },
+                    child: const Text('Сбросить'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ];
+    }
+  }
+
+  Scaffold _buildPlanScaffold() {
+    String startDay = _controller.startDate.day.toString().padLeft(2, '0');
+    String startMonth = _controller.startDate.month.toString().padLeft(2, '0');
+    String startYear = _controller.startDate.year.toString();
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
+        actions: _buildAppBarActions(),
+      ),
+      drawer: ExecutorDrawer(controller: _controller),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Старт: $startDay.$startMonth.$startYear",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  TextButton.icon(
+                    icon: const Icon(Icons.calendar_month),
+                    label: const Text("Изменить"),
+                    onPressed: () async {
+                      DateTime? picked = await showDatePicker(
+                        context: context,
+                        initialDate: _controller.startDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2030),
+                      );
+                      if (picked != null) _controller.setStartDate(picked);
+                    },
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: _controller.tasks.isEmpty
+                  ? const Center(child: Text("Нет этапов. Нажмите '+' вверху экрана.", style: TextStyle(color: Colors.grey)))
+                  : ListView.builder(
+                      itemCount: _controller.tasks.length,
+                      itemBuilder: (context, i) {
+                        var task = _controller.tasks[i];
+                        return TaskInputCard(
+                          id: task.id,
+                          title: task.name,
+                          currentMin: task.min,
+                          currentLikely: task.likely,
+                          currentMax: task.max,
+                          currentDepends: task.dependsOn.join(', '),
+                          isCompleted: task.isCompleted,
+                          actualDuration: task.actualDuration,
+                          actualEndDate: task.actualEndDate,
+                          projectStartDate: _controller.startDate,
+                          readOnly: false,
+                          plantingType: task.plantingType,
+                          culture: task.culture,
+                          plantingQuantity: task.plantingQuantity,
+                          plantingArea: task.plantingArea,
+                          sowingBreed: task.sowingBreed,
+                          sowingQuantityKg: task.sowingQuantityKg,
+                          sowingAreaHa: task.sowingAreaHa,
+                          cuttingArea: task.cuttingArea,
+                          cuttingVolume: task.cuttingVolume,
+                          clearCuttingArea: task.clearCuttingArea,
+                          clearCuttingVolume: task.clearCuttingVolume,
+                          clearingArea: task.clearingArea,
+                          clearingVolume: task.clearingVolume,
+                          panelsQuantity: task.panelsQuantity,
+                          location: task.location,
+                          quarter: task.quarter,
+                          allotment: task.allotment,
+                          onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
+                          onActualChange: (v) => _controller.updateTaskActualDuration(i, v),
+                          onTitleChange: (v) => _controller.updateTaskTitle(i, v),
+                          onUpdate: (key, val) => _controller.updateTaskValues(i, key, val),
+                          onDependsChange: (val) => _controller.updateTaskDepends(i, val),
+                          onPlantingTypeChange: (v) => _controller.updateTaskPlantingType(i, v),
+                          onCultureChange: (v) => _controller.updateTaskCulture(i, v),
+                          onPlantingQuantityChange: (v) => _controller.updateTaskPlantingQuantity(i, v),
+                          onPlantingAreaChange: (v) => _controller.updateTaskPlantingArea(i, v),
+                          onSowingBreedChange: (v) => _controller.updateTaskSowingBreed(i, v),
+                          onSowingQuantityKgChange: (v) => _controller.updateTaskSowingQuantityKg(i, v),
+                          onSowingAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
+                          onCuttingAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
+                          onCuttingVolumeChange: (v) => _controller.updateTaskCuttingVolume(i, v),
+                          onClearCuttingAreaChange: (v) => _controller.updateTaskClearCuttingArea(i, v),
+                          onClearCuttingVolumeChange: (v) => _controller.updateTaskClearCuttingVolume(i, v),
+                          onClearingAreaChange: (v) => _controller.updateTaskClearingArea(i, v),
+                          onClearingVolumeChange: (v) => _controller.updateTaskClearingVolume(i, v),
+                          onPanelsQuantityChange: (v) => _controller.updateTaskPanelsQuantity(i, v),
+                          onLocationChange: (v) => _controller.updateTaskLocation(i, v),
+                          onQuarterChange: (v) => _controller.updateTaskQuarter(i, v),
+                          onAllotmentChange: (v) => _controller.updateTaskAllotment(i, v),
+                          onDelete: () => _controller.removeTask(i),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlanTab() {
+    return _buildPlanScaffold().body!; // просто тело, AppBar уже общий
+  }
+
+  Widget _buildResultTab() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+      child: ResultView(controller: _controller),
     );
   }
 

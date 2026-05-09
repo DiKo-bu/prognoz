@@ -11,36 +11,31 @@ import 'widgets/task_fields/location_field.dart';
 import 'widgets/task_fields/quarter_allotment_fields.dart';
 
 class TaskInputCard extends StatelessWidget {
+  // ... все старые поля ...
   final String id;
   final String title;
   final double currentMin, currentLikely, currentMax;
   final String currentDepends;
   final bool isCompleted;
   final double actualDuration;
-  final DateTime? actualEndDate;          // новое
-  final DateTime projectStartDate;        // нужно для расчёта планового окончания
+  final DateTime? actualEndDate;
+  final DateTime projectStartDate;
+  final bool readOnly;   // новый параметр
 
-  // Посадка
   final String? plantingType;
   final String? culture;
   final double? plantingQuantity;
   final double? plantingArea;
-  // Посев
   final String? sowingBreed;
   final double? sowingQuantityKg;
   final double? sowingAreaHa;
-  // Выборочная санитарная рубка
   final double? cuttingArea;
   final double? cuttingVolume;
-  // Сплошная санитарная рубка
   final double? clearCuttingArea;
   final double? clearCuttingVolume;
-  // Уборка захламленности
   final double? clearingArea;
   final double? clearingVolume;
-  // Установка панно и аншлагов
   final double? panelsQuantity;
-  // Новые поля
   final String? location;
   final String? quarter;
   final String? allotment;
@@ -81,6 +76,7 @@ class TaskInputCard extends StatelessWidget {
     required this.actualDuration,
     this.actualEndDate,
     required this.projectStartDate,
+    this.readOnly = false,   // по умолчанию false
     this.plantingType,
     this.culture,
     this.plantingQuantity,
@@ -125,12 +121,12 @@ class TaskInputCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ... вся логика build остаётся без изменений, но с учётом readOnly
     final bool isInvalid = !isCompleted && ((currentMin > currentLikely) || (currentLikely > currentMax));
     final bool notEmpty = currentMin != 0 || currentLikely != 0 || currentMax != 0;
     final bool showError = isInvalid && notEmpty;
     final bool isOverMax = isCompleted && actualDuration > currentMax;
 
-    // Проверка срыва срока
     DateTime plannedEnd = projectStartDate.add(Duration(days: currentLikely.toInt()));
     bool deadlineViolation = isCompleted && actualEndDate != null && actualEndDate!.isAfter(plannedEnd);
 
@@ -147,97 +143,100 @@ class TaskInputCard extends StatelessWidget {
         child: Column(
           children: [
             _buildHeader(isOverMax || deadlineViolation, isCompleted, showError),
-            _buildCompletionRow(isOverMax),
-            if (isOverMax) _overMaxWarning,
+            if (!readOnly) _buildCompletionRow(isOverMax),
+            if (!readOnly && isOverMax) _overMaxWarning,
             if (deadlineViolation) _deadlineWarning(plannedEnd, actualEndDate!),
-            _buildDurationFields(isCompleted),
-            if (showError) _ratioError,
-            const SizedBox(height: 8),
+            if (!readOnly) _buildDurationFields(isCompleted),
+            if (!readOnly && showError) _ratioError,
+            if (!readOnly) const SizedBox(height: 8),
             if (title == 'Посадка') ...[
               PlantingFields(
                 plantingType: plantingType,
                 culture: culture,
                 plantingQuantity: plantingQuantity,
                 plantingArea: plantingArea,
-                onPlantingTypeChange: onPlantingTypeChange,
-                onCultureChange: onCultureChange,
-                onPlantingQuantityChange: onPlantingQuantityChange,
-                onPlantingAreaChange: onPlantingAreaChange,
+                onPlantingTypeChange: readOnly ? (_) {} : onPlantingTypeChange,
+                onCultureChange: readOnly ? (_) {} : onCultureChange,
+                onPlantingQuantityChange: readOnly ? (_) {} : onPlantingQuantityChange,
+                onPlantingAreaChange: readOnly ? (_) {} : onPlantingAreaChange,
               ),
-              LocationField(location: location, onChanged: onLocationChange),
+              if (location != null || !readOnly)
+                LocationField(location: location, onChanged: readOnly ? (_) {} : onLocationChange),
             ],
             if (title == 'Посев') ...[
               SowingFields(
                 sowingBreed: sowingBreed,
                 sowingQuantityKg: sowingQuantityKg,
                 sowingAreaHa: sowingAreaHa,
-                onSowingBreedChange: onSowingBreedChange,
-                onSowingQuantityKgChange: onSowingQuantityKgChange,
-                onSowingAreaHaChange: onSowingAreaHaChange,
+                onSowingBreedChange: readOnly ? (_) {} : onSowingBreedChange,
+                onSowingQuantityKgChange: readOnly ? (_) {} : onSowingQuantityKgChange,
+                onSowingAreaHaChange: readOnly ? (_) {} : onSowingAreaHaChange,
               ),
-              LocationField(location: location, onChanged: onLocationChange),
+              if (location != null || !readOnly)
+                LocationField(location: location, onChanged: readOnly ? (_) {} : onLocationChange),
             ],
             if (title == 'Выборочная санитарная рубка') ...[
               CuttingFields(
                 cuttingArea: cuttingArea,
                 cuttingVolume: cuttingVolume,
-                onCuttingAreaChange: onCuttingAreaChange,
-                onCuttingVolumeChange: onCuttingVolumeChange,
+                onCuttingAreaChange: readOnly ? (_) {} : onCuttingAreaChange,
+                onCuttingVolumeChange: readOnly ? (_) {} : onCuttingVolumeChange,
               ),
               QuarterAllotmentFields(
                 quarter: quarter,
                 allotment: allotment,
-                onQuarterChanged: onQuarterChange,
-                onAllotmentChanged: onAllotmentChange,
+                onQuarterChanged: readOnly ? (_) {} : onQuarterChange,
+                onAllotmentChanged: readOnly ? (_) {} : onAllotmentChange,
               ),
             ],
             if (title == 'Сплошная санитарная рубка') ...[
               ClearCuttingFields(
                 clearCuttingArea: clearCuttingArea,
                 clearCuttingVolume: clearCuttingVolume,
-                onClearCuttingAreaChange: onClearCuttingAreaChange,
-                onClearCuttingVolumeChange: onClearCuttingVolumeChange,
+                onClearCuttingAreaChange: readOnly ? (_) {} : onClearCuttingAreaChange,
+                onClearCuttingVolumeChange: readOnly ? (_) {} : onClearCuttingVolumeChange,
               ),
               QuarterAllotmentFields(
                 quarter: quarter,
                 allotment: allotment,
-                onQuarterChanged: onQuarterChange,
-                onAllotmentChanged: onAllotmentChange,
+                onQuarterChanged: readOnly ? (_) {} : onQuarterChange,
+                onAllotmentChanged: readOnly ? (_) {} : onAllotmentChange,
               ),
             ],
             if (title == 'Уборка захламленности') ...[
               ClearingFields(
                 clearingArea: clearingArea,
                 clearingVolume: clearingVolume,
-                onClearingAreaChange: onClearingAreaChange,
-                onClearingVolumeChange: onClearingVolumeChange,
+                onClearingAreaChange: readOnly ? (_) {} : onClearingAreaChange,
+                onClearingVolumeChange: readOnly ? (_) {} : onClearingVolumeChange,
               ),
               QuarterAllotmentFields(
                 quarter: quarter,
                 allotment: allotment,
-                onQuarterChanged: onQuarterChange,
-                onAllotmentChanged: onAllotmentChange,
+                onQuarterChanged: readOnly ? (_) {} : onQuarterChange,
+                onAllotmentChanged: readOnly ? (_) {} : onAllotmentChange,
               ),
             ],
             if (title == 'Установка панно и аншлагов') ...[
               PanelsField(
                 panelsQuantity: panelsQuantity,
-                onPanelsQuantityChange: onPanelsQuantityChange,
+                onPanelsQuantityChange: readOnly ? (_) {} : onPanelsQuantityChange,
               ),
               QuarterAllotmentFields(
                 quarter: quarter,
                 allotment: allotment,
-                onQuarterChanged: onQuarterChange,
-                onAllotmentChanged: onAllotmentChange,
+                onQuarterChanged: readOnly ? (_) {} : onQuarterChange,
+                onAllotmentChanged: readOnly ? (_) {} : onAllotmentChange,
               ),
             ],
-            _buildDependsField(),
+            if (!readOnly) _buildDependsField(),
           ],
         ),
       ),
     );
   }
 
+  // ... все остальные методы (_buildHeader, _buildCompletionRow и т.д.) остаются без изменений ...
   Widget _buildHeader(bool isWarning, bool isCompleted, bool showError) {
     return Row(
       children: [
@@ -252,21 +251,24 @@ class TaskInputCard extends StatelessWidget {
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: DropdownButtonFormField<String>(
-            value: workNames.contains(title) ? title : null,
-            decoration: const InputDecoration(border: InputBorder.none, isDense: true),
-            items: workNames.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)))).toList(),
-            onChanged: (v) {
-              if (v != null) onTitleChange(v);
-            },
-            hint: const Text('Выберите работу', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-          ),
+          child: readOnly
+              ? Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))
+              : DropdownButtonFormField<String>(
+                  value: workNames.contains(title) ? title : null,
+                  decoration: const InputDecoration(border: InputBorder.none, isDense: true),
+                  items: workNames.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)))).toList(),
+                  onChanged: (v) {
+                    if (v != null) onTitleChange(v);
+                  },
+                  hint: const Text('Выберите работу', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
         ),
-        IconButton(
-            icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
-            onPressed: onDelete,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints()),
+        if (!readOnly)
+          IconButton(
+              icon: const Icon(Icons.close, color: Colors.redAccent, size: 20),
+              onPressed: onDelete,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints()),
       ],
     );
   }

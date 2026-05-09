@@ -7,6 +7,7 @@ class SimulationTask {
   List<String> dependsOn;
   bool isCompleted;
   double actualDuration;
+  DateTime? actualEndDate;   // новое поле
 
   // поля для Посадки
   String? plantingType;
@@ -34,10 +35,9 @@ class SimulationTask {
   // поле для Установки панно и аншлагов
   double? panelsQuantity;
 
-  // новые общие поля
-  String? location;   // "Где?" (для Посадки и Посева)
-  String? quarter;    // Квартал
-  String? allotment;  // Выдел
+  String? location;
+  String? quarter;
+  String? allotment;
 
   SimulationTask({
     required this.id,
@@ -48,6 +48,7 @@ class SimulationTask {
     this.dependsOn = const [],
     this.isCompleted = false,
     this.actualDuration = 0,
+    this.actualEndDate,
     this.plantingType,
     this.culture,
     this.plantingQuantity,
@@ -76,6 +77,7 @@ class SimulationTask {
     'dependsOn': dependsOn,
     'isCompleted': isCompleted,
     'actualDuration': actualDuration,
+    if (actualEndDate != null) 'actualEndDate': actualEndDate!.toIso8601String(),
     if (plantingType != null) 'plantingType': plantingType,
     if (culture != null) 'culture': culture,
     if (plantingQuantity != null) 'plantingQuantity': plantingQuantity,
@@ -104,6 +106,7 @@ class SimulationTask {
     dependsOn: List<String>.from(map['dependsOn'] ?? []),
     isCompleted: map['isCompleted'] ?? false,
     actualDuration: (map['actualDuration'] ?? 0).toDouble(),
+    actualEndDate: map['actualEndDate'] != null ? DateTime.tryParse(map['actualEndDate']) : null,
     plantingType: map['plantingType'],
     culture: map['culture'],
     plantingQuantity: map['plantingQuantity']?.toDouble(),

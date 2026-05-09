@@ -262,6 +262,9 @@ class ExecutorController extends ChangeNotifier {
           var taskUpdate = incomingData[taskId] ?? incomingData[tasks[i].name];
           if (taskUpdate.containsKey('completed')) tasks[i].isCompleted = taskUpdate['completed'];
           if (taskUpdate.containsKey('actual')) tasks[i].actualDuration = (taskUpdate['actual'] as num).toDouble();
+          if (taskUpdate.containsKey('actualEndDate')) {
+            tasks[i].actualEndDate = DateTime.tryParse(taskUpdate['actualEndDate']);
+          }
           updated = true;
         }
       }
@@ -287,7 +290,6 @@ class ExecutorController extends ChangeNotifier {
         'dependsOn': t.dependsOn,
         'workType': t.name,
         'executor': currentExecutor,
-        // включаем location/quarter/allotment для всех типов
         if (t.location != null) 'location': t.location,
         if (t.quarter != null) 'quarter': t.quarter,
         if (t.allotment != null) 'allotment': t.allotment,
@@ -347,11 +349,23 @@ class ExecutorController extends ChangeNotifier {
     final baseline = MonteCarloEngine.calculateBaselinePlan(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
 
+    // Проверка срыва сроков
+    String deadlineWarnings = '';
+    for (var t in tasks) {
+      if (t.isCompleted && t.actualEndDate != null) {
+        DateTime plannedEnd = startDate.add(Duration(days: t.likely.toInt()));
+        if (t.actualEndDate!.isAfter(plannedEnd)) {
+          deadlineWarnings += '⚠️ Срыв срока: «${t.name}» – план ${plannedEnd.day.toString().padLeft(2,'0')}.${plannedEnd.month.toString().padLeft(2,'0')}, факт ${t.actualEndDate!.day.toString().padLeft(2,'0')}.${t.actualEndDate!.month.toString().padLeft(2,'0')}\n';
+        }
+      }
+    }
+
     DateTime finishDate = startDate.add(Duration(days: p90.ceil()));
     String fDay = finishDate.day.toString().padLeft(2, '0');
     String fMonth = finishDate.month.toString().padLeft(2, '0');
 
-    resultText = "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
+    resultText = (deadlineWarnings.isNotEmpty ? deadlineWarnings + '\n' : '') +
+        "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
     ganttData = baseline.taskData;
     p90Duration = p90;
     notifyListeners();

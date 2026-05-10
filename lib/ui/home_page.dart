@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mqtt_client/mqtt_client.dart';
+import 'package:mqtt_client/mqtt_server_client.dart';
 import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
@@ -23,6 +25,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
+  MqttServerClient? _mqttClient;
+
+  // --------------- Настройки Mosquitto ---------------
+  static const String broker = '10.0.2.2'; // IP-адрес брокера (10.0.2.2 для эмулятора Android, иначе реальный IP)
+  static const int port = 1883;
+  // --------------------------------------------------
 
   @override
   void initState() {
@@ -30,13 +38,70 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _controller.init();
+    _setupMqtt();
   }
 
   @override
   void dispose() {
+    _mqttClient?.disconnect();
     _tabController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _setupMqtt() async {
+    _mqttClient = MqttServerClient(broker, '');
+    _mqttClient!.port = port;
+    _mqttClient!.logging(on: false);
+    _mqttClient!.keepAlivePeriod = 20;
+
+    final connMessage = MqttConnectMessage()
+        .withClientIdentifier('prognoz_${_controller.currentExecutor}')
+        .startClean()
+        .withWillQos(MqttQos.atLeastOnce);
+    _mqttClient!.connectionMessage = connMessage;
+
+    try {
+      await _mqttClient!.connect();
+    } catch (e) {
+      print('MQTT connect error: $e');
+      return;
+    }
+
+    if (_mqttClient!.connectionStatus?.state == MqttConnectionState.connected) {
+      // Подписываемся на отчёты от сервера (топик, куда сервер пересылает полный отчёт)
+      final topic = 'prognoz/reports/${_controller.currentExecutor}';
+      _mqttClient!.subscribe(topic, MqttQos.atLeastOnce);
+      print('MQTT connected, subscribed to $topic');
+
+      _mqttClient!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
+        final msg = messages[0].payload as MqttPublishMessage;
+        final payload = MqttPublishPayload.bytesToStringAsString(msg.payload.message);
+        _controller.importProgressFromJson(payload);
+      });
+    }
+  }
+
+  void _exportPlanViaMqtt() {
+    final json = _controller.exportPlanToJson();
+    if (_mqttClient?.connectionStatus?.state == MqttConnectionState.connected) {
+      // Публикуем план в топик, который слушает сервер (forest/plans)
+      const topic = 'forest/plans';
+      _mqttClient!.publishMessage(
+        topic,
+        MqttQos.atLeastOnce,
+        MqttClientPayloadBuilder().addString(json).payload!,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('План отправлен через MQTT')),
+      );
+    } else {
+      // fallback: скопировать в буфер
+      Clipboard.setData(ClipboardData(text: json));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('MQTT не подключён – план скопирован в буфер')),
+      );
+    }
   }
 
   void _showImportDialog() {
@@ -49,7 +114,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           controller: importCtrl,
           maxLines: 5,
           decoration: const InputDecoration(
-            hintText: 'Вставьте код отчета сюда...',
+            hintText: 'Вставьте код отчета (или придёт автоматически)',
             border: OutlineInputBorder(),
           ),
         ),
@@ -61,22 +126,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               _controller.importProgressFromJson(importCtrl.text);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Отчет принят, данные обновлены')),
+                const SnackBar(content: Text('Отчет принят вручную')),
               );
-              _tabController.animateTo(1); // переключаем на Результат
+              _tabController.animateTo(1);
             },
             child: const Text('ОБНОВИТЬ ДАННЫЕ'),
           ),
         ],
       ),
-    );
-  }
-
-  void _exportPlan() {
-    final jsonStr = _controller.exportPlanToJson();
-    Clipboard.setData(ClipboardData(text: jsonStr));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('План скопирован в буфер обмена')),
     );
   }
 
@@ -87,7 +144,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         SnackBar(content: Text(_controller.resultText)),
       );
     }
-    // Остаёмся на вкладке Результат (уже там)
   }
 
   @override
@@ -120,8 +176,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         }
 
         final bool isPlanTab = _tabController.index == 0;
-        final bool isResultTab = _tabController.index == 1;
-
         String startDay = _controller.startDate.day.toString().padLeft(2, '0');
         String startMonth = _controller.startDate.month.toString().padLeft(2, '0');
         String startYear = _controller.startDate.year.toString();
@@ -133,23 +187,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               if (isPlanTab) ...[
                 IconButton(
                   icon: const Icon(Icons.upload, color: Colors.red),
-                  tooltip: 'Экспорт плана',
-                  onPressed: _exportPlan,
+                  tooltip: 'Отправить план',
+                  onPressed: _exportPlanViaMqtt,
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
                   onPressed: _controller.addTask,
                 ),
               ],
-              if (isResultTab) ...[
+              if (!isPlanTab) ...[
                 IconButton(
                   icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
-                  tooltip: 'Выполнить моделирование',
+                  tooltip: 'Моделирование',
                   onPressed: _runModeling,
                 ),
                 IconButton(
                   icon: const Icon(Icons.download_for_offline, color: Colors.green),
-                  tooltip: 'Принять отчёт',
+                  tooltip: 'Принять отчёт вручную',
                   onPressed: _showImportDialog,
                 ),
               ],
@@ -167,7 +221,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           body: TabBarView(
             controller: _tabController,
             children: [
-              // Вкладка ПЛАН
+              // План
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 child: Column(
@@ -202,8 +256,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     ),
                     Expanded(
                       child: _controller.tasks.isEmpty
-                          ? const Center(child: Text("Нет этапов. Нажмите '+' вверху экрана.",
-                              style: TextStyle(color: Colors.grey)))
+                          ? const Center(child: Text("Нет этапов.", style: TextStyle(color: Colors.grey)))
                           : ListView.builder(
                               itemCount: _controller.tasks.length,
                               itemBuilder: (context, i) {
@@ -240,8 +293,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                     onCompletionChange: (v) => _controller.updateTaskCompletion(i, v),
                                     onActualDurationChange: (v) => _controller.updateTaskActualDuration(i, v),
                                     onTitleChange: (v) => _controller.updateTaskTitle(i, v),
-                                    onDurationValuesChange: (key, val) =>
-                                        _controller.updateTaskValues(i, key, val),
+                                    onDurationValuesChange: (key, val) => _controller.updateTaskValues(i, key, val),
                                     onDependsChange: (val) => _controller.updateTaskDepends(i, val),
                                     onDelete: () => _controller.removeTask(i),
                                   ),
@@ -249,45 +301,38 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                       ? PlantingCallbacks(
                                           onTypeChange: (v) => _controller.updateTaskPlantingType(i, v),
                                           onCultureChange: (v) => _controller.updateTaskCulture(i, v),
-                                          onQuantityChange: (v) =>
-                                              _controller.updateTaskPlantingQuantity(i, v),
+                                          onQuantityChange: (v) => _controller.updateTaskPlantingQuantity(i, v),
                                           onAreaChange: (v) => _controller.updateTaskPlantingArea(i, v),
                                         )
                                       : null,
                                   sowing: task.name == 'Посев'
                                       ? SowingCallbacks(
                                           onBreedChange: (v) => _controller.updateTaskSowingBreed(i, v),
-                                          onQuantityKgChange: (v) =>
-                                              _controller.updateTaskSowingQuantityKg(i, v),
+                                          onQuantityKgChange: (v) => _controller.updateTaskSowingQuantityKg(i, v),
                                           onAreaHaChange: (v) => _controller.updateTaskSowingAreaHa(i, v),
                                         )
                                       : null,
                                   selectiveCutting: task.name == 'Выборочная санитарная рубка'
                                       ? SelectiveCuttingCallbacks(
                                           onAreaChange: (v) => _controller.updateTaskCuttingArea(i, v),
-                                          onVolumeChange: (v) =>
-                                              _controller.updateTaskCuttingVolume(i, v),
+                                          onVolumeChange: (v) => _controller.updateTaskCuttingVolume(i, v),
                                         )
                                       : null,
                                   clearCutting: task.name == 'Сплошная санитарная рубка'
                                       ? ClearCuttingCallbacks(
-                                          onAreaChange: (v) =>
-                                              _controller.updateTaskClearCuttingArea(i, v),
-                                          onVolumeChange: (v) =>
-                                              _controller.updateTaskClearCuttingVolume(i, v),
+                                          onAreaChange: (v) => _controller.updateTaskClearCuttingArea(i, v),
+                                          onVolumeChange: (v) => _controller.updateTaskClearCuttingVolume(i, v),
                                         )
                                       : null,
                                   clearing: task.name == 'Уборка захламленности'
                                       ? ClearingCallbacks(
                                           onAreaChange: (v) => _controller.updateTaskClearingArea(i, v),
-                                          onVolumeChange: (v) =>
-                                              _controller.updateTaskClearingVolume(i, v),
+                                          onVolumeChange: (v) => _controller.updateTaskClearingVolume(i, v),
                                         )
                                       : null,
                                   panels: task.name == 'Установка панно и аншлагов'
                                       ? PanelsCallbacks(
-                                          onQuantityChange: (v) =>
-                                              _controller.updateTaskPanelsQuantity(i, v),
+                                          onQuantityChange: (v) => _controller.updateTaskPanelsQuantity(i, v),
                                         )
                                       : null,
                                   general: GeneralFieldCallbacks(
@@ -302,13 +347,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ],
                 ),
               ),
-              // Вкладка РЕЗУЛЬТАТ
+              // Результат
               _controller.ganttData.isNotEmpty
                   ? ResultDashboard(controller: _controller)
-                  : CompletedTasksView(
-                      tasks: _controller.tasks,
-                      startDate: _controller.startDate,
-                    ),
+                  : CompletedTasksView(tasks: _controller.tasks, startDate: _controller.startDate),
             ],
           ),
         );

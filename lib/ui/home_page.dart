@@ -27,7 +27,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late TabController _tabController;
   MqttServerClient? _mqttClient;
 
-  static const String broker = 'spam-hour-respectively-morris.trycloudflare.com';
+  static const String broker = 'test.test';
   static const int port = 1883;
 
   @override

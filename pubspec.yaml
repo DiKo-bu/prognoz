@@ -1,7 +1,7 @@
 name: prognoz
 description: Monte Carlo & Gantt Simulator
 publish_to: 'none'
-version: 1.0.7
+version: 1.0.7+8
 environment:
   sdk: '>=3.0.0 <4.0.0'
 dependencies:
@@ -10,6 +10,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   intl: ^0.19.0
+  mqtt_client: ^10.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

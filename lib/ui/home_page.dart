@@ -27,10 +27,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late TabController _tabController;
   MqttServerClient? _mqttClient;
 
-  // --------------- Настройки Mosquitto ---------------
-  static const String broker = 'spam-hour-respectively-morris.trycloudflare.com'; // IP-адрес брокера (10.0.2.2 для эмулятора Android, иначе реальный IP)
+  static const String broker = 'spam-hour-respectively-morris.trycloudflare.com';
   static const int port = 1883;
-  // --------------------------------------------------
 
   @override
   void initState() {
@@ -69,10 +67,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
 
     if (_mqttClient!.connectionStatus?.state == MqttConnectionState.connected) {
-      // Подписываемся на отчёты от сервера (топик, куда сервер пересылает полный отчёт)
-      final topic = 'prognoz/reports/${_controller.currentExecutor}';
-      _mqttClient!.subscribe(topic, MqttQos.atLeastOnce);
-      print('MQTT connected, subscribed to $topic');
+      // Подписываемся на broadcas, куда роутер шлёт все сообщения
+      _mqttClient!.subscribe('forest/broadcast', MqttQos.atLeastOnce);
 
       _mqttClient!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
         final msg = messages[0].payload as MqttPublishMessage;
@@ -85,10 +81,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   void _exportPlanViaMqtt() {
     final json = _controller.exportPlanToJson();
     if (_mqttClient?.connectionStatus?.state == MqttConnectionState.connected) {
-      // Публикуем план в топик, который слушает сервер (forest/plans)
-      const topic = 'forest/plans';
       _mqttClient!.publishMessage(
-        topic,
+        'forest/inbox',   // отравляем в inbox роутера
         MqttQos.atLeastOnce,
         MqttClientPayloadBuilder().addString(json).payload!,
       );
@@ -96,7 +90,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         const SnackBar(content: Text('План отправлен через MQTT')),
       );
     } else {
-      // fallback: скопировать в буфер
       Clipboard.setData(ClipboardData(text: json));
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('MQTT не подключён – план скопирован в буфер')),

@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   MqttServerClient? _mqttClient;
 
   // --------------- Настройки Mosquitto ---------------
-  static const String broker = '10.0.2.2'; // IP-адрес брокера (10.0.2.2 для эмулятора Android, иначе реальный IP)
+  static const String broker = '127.0.0.1'; // IP-адрес брокера (10.0.2.2 для эмулятора Android, иначе реальный IP)
   static const int port = 1883;
   // --------------------------------------------------
 

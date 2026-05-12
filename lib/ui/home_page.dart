@@ -17,7 +17,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
-  static const String serverUrl = 'http://127.0.0.1:8000';
+  static const String serverUrl = 'https://receiving-guards-success-lasting.trycloudflare.com';
 
   @override
   void initState() {
@@ -50,6 +50,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   Future<void> _sendPlan() async {
     final json = _controller.exportPlanToJson();
+    String? errorMsg;
     try {
       final response = await http.post(
         Uri.parse('$serverUrl/plan'),
@@ -59,10 +60,17 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('План отправлен')));
         return;
+      } else {
+        errorMsg = 'Ошибка ${response.statusCode}: ${response.reasonPhrase}';
       }
-    } catch (_) {}
+    } catch (e) {
+      errorMsg = 'Исключение: $e';
+    }
+    // Если дошли сюда — запасной вариант
     Clipboard.setData(ClipboardData(text: json));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Сервер недоступен, план в буфере')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${errorMsg ?? "Неизвестная ошибка"}. План скопирован в буфер')),
+    );
   }
 
   void _showImportDialog() {

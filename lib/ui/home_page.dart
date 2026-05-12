@@ -27,7 +27,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   late TabController _tabController;
   MqttServerClient? _mqttClient;
 
-  static const String broker = 'test.test';
+  static const String broker = 'spam-hour-respectively-morris.trycloudflare.com';
   static const int port = 1883;
 
   @override
@@ -67,7 +67,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
 
     if (_mqttClient!.connectionStatus?.state == MqttConnectionState.connected) {
-      // Подписываемся на broadcas, куда роутер шлёт все сообщения
       _mqttClient!.subscribe('forest/broadcast', MqttQos.atLeastOnce);
 
       _mqttClient!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
@@ -79,20 +78,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   }
 
   void _exportPlanViaMqtt() {
-    final json = _controller.exportPlanToJson();
+    // ===== ТЕСТОВАЯ ПУБЛИКАЦИЯ =====
+    const testTopic = 'forest/reports';
+    const testPayload = '{"plan_id":"plant_101", "actual":500, "completed":true}';
+
     if (_mqttClient?.connectionStatus?.state == MqttConnectionState.connected) {
       _mqttClient!.publishMessage(
-        'forest/inbox',   // отравляем в inbox роутера
+        testTopic,
         MqttQos.atLeastOnce,
-        MqttClientPayloadBuilder().addString(json).payload!,
+        MqttClientPayloadBuilder().addString(testPayload).payload!,
       );
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('План отправлен через MQTT')),
+        const SnackBar(content: Text('Тестовое сообщение отправлено в forest/reports')),
       );
     } else {
-      Clipboard.setData(ClipboardData(text: json));
+      // fallback: скопировать в буфер
+      Clipboard.setData(ClipboardData(text: testPayload));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('MQTT не подключён – план скопирован в буфер')),
+        const SnackBar(content: Text('MQTT не подключён – сообщение скопировано в буфер')),
       );
     }
   }
@@ -180,7 +183,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
               if (isPlanTab) ...[
                 IconButton(
                   icon: const Icon(Icons.upload, color: Colors.red),
-                  tooltip: 'Отправить план',
+                  tooltip: 'Отправить тест',
                   onPressed: _exportPlanViaMqtt,
                 ),
                 IconButton(

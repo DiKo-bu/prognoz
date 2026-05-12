@@ -17,7 +17,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
-  static const String serverUrl = 'https://receiving-guards-success-lasting.trycloudflare.com';
+  static const String serverUrl = 'https://execute-acdbentity-sticky-wyoming.trycloudflare.com';
 
   @override
   void initState() {

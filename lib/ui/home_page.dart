@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
+import 'package:dns/dns.dart';
 import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
@@ -26,7 +27,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
   MqttServerClient? _mqttClient;
-  String? _mqttError; // ← сохраним ошибку
+  String? _mqttError;
 
   static const String broker = 'receiving-guards-success-lasting.trycloudflare.com';
   static const int port = 1883;
@@ -48,8 +49,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
+  /// Резолвим домен через Google DNS (8.8.8.8), чтобы обойти системный DNS андроида
+  Future<String> _resolveHost(String host) async {
+    try {
+      final resolver = DnsClient.google();
+      final response = await resolver.lookupARecord(host);
+      if (response.answers.isNotEmpty) {
+        final ip = response.answers.first.address;
+        print('DNS OK: $host → $ip');
+        return ip;
+      }
+    } catch (e) {
+      print('DNS fallback error: $e');
+    }
+    return host; // если не получилось, возвращаем исходный домен
+  }
+
   Future<void> _setupMqtt() async {
-    _mqttClient = MqttServerClient(broker, '');
+    final ip = await _resolveHost(broker);
+    _mqttClient = MqttServerClient(ip, '');
     _mqttClient!.port = port;
     _mqttClient!.logging(on: false);
     _mqttClient!.keepAlivePeriod = 20;
@@ -62,6 +80,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     try {
       await _mqttClient!.connect();
+      print('MQTT connected to $ip');
     } catch (e) {
       _mqttError = 'Ошибка подключения: $e';
       setState(() {});

@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   MqttServerClient? _mqttClient;
   String? _mqttError; // ← сохраним ошибку
 
-  static const String broker = 'spam-hour-respectively-morris.trycloudflare.com';
+  static const String broker = 'receiving-guards-success-lasting.trycloudflare.com';
   static const int port = 1883;
 
   @override

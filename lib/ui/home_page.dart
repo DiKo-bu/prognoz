@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:dnslib/dnslib.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
@@ -49,20 +50,23 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  /// Резолвим домен через Google DNS (8.8.8.8), чтобы обойти системный DNS андроида
+  /// Резолвим домен через HTTPS-запрос к Cloudflare DoH
   Future<String> _resolveHost(String host) async {
     try {
-      final resolver = DNSServer(host: "8.8.8.8", port: 53, protocol: DNSProtocol.udp);
-      final response = await DNSClient.query(domain: host, dnsRecordType: DNSRecordTypes.A, dnsServer: resolver);
-      if (response.isNotEmpty) {
-        final ip = response.first.address;
-        print('DNS OK: $host → $ip');
-        return ip;
+      final url = Uri.https('cloudflare-dns.com', '/dns-query', {'name': host, 'type': 'A'});
+      final response = await http.get(url, headers: {'Accept': 'application/dns-json'});
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['Answer'] != null && data['Answer'].isNotEmpty) {
+          final ip = data['Answer'][0]['data'];
+          print('DNS OK: $host → $ip');
+          return ip;
+        }
       }
     } catch (e) {
-      print('DNS fallback error: $e');
+      print('DNS HTTP error: $e');
     }
-    return host; // если не получилось, возвращаем исходный домен
+    return host; // fallback – вернём исходный домен
   }
 
   Future<void> _setupMqtt() async {
@@ -80,7 +84,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
     try {
       await _mqttClient!.connect();
-      print('MQTT connected to $ip');
     } catch (e) {
       _mqttError = 'Ошибка подключения: $e';
       setState(() {});

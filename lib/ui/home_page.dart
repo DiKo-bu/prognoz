@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
-import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:mqtt_client/mqtt_browser_client.dart';
 import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
@@ -27,11 +25,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
-  MqttServerClient? _mqttClient;
+  MqttBrowserClient? _mqttClient;
   String? _mqttError;
 
-  static const String broker = 'receiving-guards-success-lasting.trycloudflare.com';
-  static const int port = 1883;
+  static const String broker = 'wss://receiving-guards-success-lasting.trycloudflare.com/mqtt';
 
   @override
   void initState() {
@@ -50,31 +47,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  /// Резолвим домен через HTTPS-запрос к Cloudflare DoH
-  Future<String> _resolveHost(String host) async {
-    try {
-      final url = Uri.https('cloudflare-dns.com', '/dns-query', {'name': host, 'type': 'A'});
-      final response = await http.get(url, headers: {'Accept': 'application/dns-json'});
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['Answer'] != null && data['Answer'].isNotEmpty) {
-          final ip = data['Answer'][0]['data'];
-          print('DNS OK: $host → $ip');
-          return ip;
-        }
-      }
-    } catch (e) {
-      print('DNS HTTP error: $e');
-    }
-    return host; // fallback – вернём исходный домен
-  }
-
   Future<void> _setupMqtt() async {
-    final ip = await _resolveHost(broker);
-    _mqttClient = MqttServerClient(ip, '');
-    _mqttClient!.port = port;
+    _mqttClient = MqttBrowserClient(broker, '');
+    _mqttClient!.port = 443;
     _mqttClient!.logging(on: false);
     _mqttClient!.keepAlivePeriod = 20;
+    _mqttClient!.useWebSocket = true;
 
     final connMessage = MqttConnectMessage()
         .withClientIdentifier('prognoz_${_controller.currentExecutor}')
@@ -85,8 +63,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     try {
       await _mqttClient!.connect();
     } catch (e) {
-      _mqttError = 'Ошибка подключения: $e';
-      setState(() {});
+      setState(() => _mqttError = 'Ошибка подключения: $e');
       return;
     }
 
@@ -98,8 +75,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _controller.importProgressFromJson(payload);
       });
     } else {
-      _mqttError = 'Статус: ${_mqttClient?.connectionStatus?.state}';
-      setState(() {});
+      setState(() => _mqttError = 'Статус: ${_mqttClient?.connectionStatus?.state}');
     }
   }
 
@@ -177,48 +153,41 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
         if (_controller.currentExecutor.isEmpty) {
           return Scaffold(
-            appBar: AppBar(title: const Text('Лесной Прогноз')),
-            drawer: ExecutorDrawer(controller: _controller),
+            appBar: AppBar(title: const Text('шп рщ щр')),
             body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Нет выбранного исполнителя.', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Создать исполнителя'),
-                    onPressed: () => _showAddExecutorDialog(),
-                  ),
-                ],
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.person_add),
+                label: const Text('Создать исполнителя'),
+                onPressed: _showAddExecutorDialog,
               ),
             ),
           );
         }
 
-        final bool isPlanTab = _tabController.index == 0;
-        String startDay = _controller.startDate.day.toString().padLeft(2, '0');
-        String startMonth = _controller.startDate.month.toString().padLeft(2, '0');
-        String startYear = _controller.startDate.year.toString();
+        final startDay = _controller.startDate.day.toString().padLeft(2, '0');
+        final startMonth = _controller.startDate.month.toString().padLeft(2, '0');
+        final startYear = _controller.startDate.year;
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(_controller.currentExecutor, style: const TextStyle(fontSize: 18)),
+            title: Text(_controller.currentExecutor),
+            backgroundColor: Colors.green[700],
+            foregroundColor: Colors.white,
             actions: [
-              if (isPlanTab) ...[
+              if (_tabController.index == 0) ...[
                 IconButton(
-                  icon: const Icon(Icons.upload, color: Colors.red),
-                  tooltip: 'Отправить тест',
+                  icon: const Icon(Icons.upload),
+                  color: Colors.red,
+                  tooltip: 'Отправить отчёт',
                   onPressed: _exportPlanViaMqtt,
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline),
-                  onPressed: _controller.addTask,
+                  tooltip: 'Добавить этап',
+                  onPressed: () => _controller.addDefaultTask(),
                 ),
-              ],
-              if (!isPlanTab) ...[
                 IconButton(
-                  icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30),
+                  icon: const Icon(Icons.bar_chart),
                   tooltip: 'Моделирование',
                   onPressed: _runModeling,
                 ),
@@ -242,7 +211,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           body: TabBarView(
             controller: _tabController,
             children: [
-              // План
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 child: Column(
@@ -368,7 +336,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                   ],
                 ),
               ),
-              // Результат
               _controller.ganttData.isNotEmpty
                   ? ResultDashboard(controller: _controller)
                   : CompletedTasksView(tasks: _controller.tasks, startDate: _controller.startDate),

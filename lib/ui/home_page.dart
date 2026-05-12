@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
-import 'package:dns/dns.dart';
+import 'package:dnslib/dnslib.dart';
 import '../data/controller.dart';
 import 'task_input_card.dart';
 import 'widgets/executor_drawer.dart';
@@ -52,10 +52,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   /// Резолвим домен через Google DNS (8.8.8.8), чтобы обойти системный DNS андроида
   Future<String> _resolveHost(String host) async {
     try {
-      final resolver = DnsClient.google();
-      final response = await resolver.lookupARecord(host);
-      if (response.answers.isNotEmpty) {
-        final ip = response.answers.first.address;
+      final resolver = DNSServer(host: "8.8.8.8", port: 53, protocol: DNSProtocol.udp);
+      final response = await DNSClient.query(domain: host, dnsRecordType: DNSRecordTypes.A, dnsServer: resolver);
+      if (response.isNotEmpty) {
+        final ip = response.first.address;
         print('DNS OK: $host → $ip');
         return ip;
       }

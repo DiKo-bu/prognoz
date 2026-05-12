@@ -26,6 +26,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
   MqttServerClient? _mqttClient;
+  String? _mqttError; // ← сохраним ошибку
 
   static const String broker = 'spam-hour-respectively-morris.trycloudflare.com';
   static const int port = 1883;
@@ -62,23 +63,25 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     try {
       await _mqttClient!.connect();
     } catch (e) {
-      print('MQTT connect error: $e');
+      _mqttError = 'Ошибка подключения: $e';
+      setState(() {});
       return;
     }
 
     if (_mqttClient!.connectionStatus?.state == MqttConnectionState.connected) {
       _mqttClient!.subscribe('forest/broadcast', MqttQos.atLeastOnce);
-
       _mqttClient!.updates!.listen((List<MqttReceivedMessage<MqttMessage>> messages) {
         final msg = messages[0].payload as MqttPublishMessage;
         final payload = MqttPublishPayload.bytesToStringAsString(msg.payload.message);
         _controller.importProgressFromJson(payload);
       });
+    } else {
+      _mqttError = 'Статус: ${_mqttClient?.connectionStatus?.state}';
+      setState(() {});
     }
   }
 
   void _exportPlanViaMqtt() {
-    // ===== ТЕСТОВАЯ ПУБЛИКАЦИЯ =====
     const testTopic = 'forest/reports';
     const testPayload = '{"plan_id":"plant_101", "actual":500, "completed":true}';
 
@@ -92,10 +95,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         const SnackBar(content: Text('Тестовое сообщение отправлено в forest/reports')),
       );
     } else {
-      // fallback: скопировать в буфер
+      String reason = _mqttError ?? 'неизвестная причина';
       Clipboard.setData(ClipboardData(text: testPayload));
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('MQTT не подключён – сообщение скопировано в буфер')),
+        SnackBar(content: Text('MQTT не подключён ($reason) – сообщение скопировано в буфер')),
       );
     }
   }

@@ -1,30 +1,37 @@
-name: Build APK
-on: [push]
+[span_0](start_span)name: Build APK[span_0](end_span)
+[span_1](start_span)on: [push][span_1](end_span)
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    [span_2](start_span)runs-on: ubuntu-latest[span_2](end_span)
     steps:
-      - uses: actions/checkout@v4
+      - [span_3](start_span)uses: actions/checkout@v4[span_3](end_span)
       
-      - uses: actions/setup-java@v3
+      - [span_4](start_span)uses: actions/setup-java@v3[span_4](end_span)
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          [span_5](start_span)distribution: 'zulu'[span_5](end_span)
+          [span_6](start_span)java-version: '17'[span_6](end_span)
           
-      - uses: subosito/flutter-action@v2
+      - [span_7](start_span)uses: subosito/flutter-action@v2[span_7](end_span)
         with:
-          channel: 'stable'
+          [span_8](start_span)channel: 'stable'[span_8](end_span)
 
-      # Генерируем недостающие файлы android на лету
-            - run: flutter create . --platforms android --org com.dikobu.prognoz
+      # Генерируем файлы android в одну строку со всеми флагами
+      - run: flutter create . -[span_9](start_span)-platforms android --org com.dikobu.prognoz[span_9](end_span)
 
-      # Вставляем разрешения на интернет и открытие ссылок прямо в сгенерированный файл
-      - name: Patch Android Manifest for Internet and URLs
+      # Добавляем разрешения на интернет и открытие ссылок в сгенерированный манифест
+      - name: Patch Android Manifest
         run: |
           MANIFEST=android/app/src/main/AndroidManifest.xml
-          # Добавляем разрешение на интернет
+          # Добавляем разрешение на интернет перед тегом <application
           sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST
-          # Добавляем блок <queries> для Android 11+ (чтобы работали ссылки)
-          sed -i '/<application/i \    <queries><intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent></queries>' $MANIFEST
+          # Добавляем разрешение на открытие браузера (queries) для Android 11+
+          sed -i '/<application/i \    <queries><intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent><intent><action android:name="android.intent.action.VIEW" /><data android:scheme="http" /></intent></queries>' $MANIFEST
 
-      - run: flutter build apk --release
+      # Собираем релизный APK
+      - [span_10](start_span)run: flutter build apk --release[span_10](end_span)
+      
+      - [span_11](start_span)uses: actions/upload-artifact@v4[span_11](end_span)
+        with:
+          [span_12](start_span)name: prognoz-apk[span_12](end_span)
+          [span_13](start_span)path: build/app/outputs/flutter-apk/app-release.apk[span_13](end_span)

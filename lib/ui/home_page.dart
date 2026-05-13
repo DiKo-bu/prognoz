@@ -20,8 +20,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
 
   // --------------------------------------------------
   // НАСТРОЙКИ TELEGRAM БОТА (заменить на реальные)
-  static const String botToken = 'AAGlkprHYwSQqIjerc2g7kEovj7TWU06mfU';          // <-- токен от @BotFather
-  static const int chatId = 8406568387;                      // <-- ID чата или пользователя
+  static const String botToken = '8945344488:AAEnDBNXE9XcrznkIscioaLNRiRTMsqdyjA';          // <-- токен от @BotFather
+  static const int chatId = 2012874307;                      // <-- ID чата или пользователя
   // --------------------------------------------------
 
   @override

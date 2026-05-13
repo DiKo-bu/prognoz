@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import '../data/controller.dart';
 import 'task_card_factory.dart';
 import 'widgets/executor_drawer.dart';
@@ -17,7 +15,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
-  static const String serverUrl = 'https://execute-acdbentity-sticky-wyoming.trycloudflare.com';
 
   @override
   void initState() {
@@ -25,7 +22,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _controller.init();
-    _startPolling();
   }
 
   @override
@@ -35,41 +31,11 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  void _startPolling() {
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 3));
-      try {
-        final response = await http.get(Uri.parse('$serverUrl/report?executor=${_controller.currentExecutor}'));
-        if (response.statusCode == 200 && response.body.isNotEmpty) {
-          _controller.importProgressFromJson(response.body);
-        }
-      } catch (_) {}
-      return true;
-    });
-  }
-
-  Future<void> _sendPlan() async {
+  void _copyPlanToClipboard() {
     final json = _controller.exportPlanToJson();
-    String? errorMsg;
-    try {
-      final response = await http.post(
-        Uri.parse('$serverUrl/plan'),
-        headers: {'Content-Type': 'application/json'},
-        body: json,
-      );
-      if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('План отправлен')));
-        return;
-      } else {
-        errorMsg = 'Ошибка ${response.statusCode}: ${response.reasonPhrase}';
-      }
-    } catch (e) {
-      errorMsg = 'Исключение: $e';
-    }
-    // Если дошли сюда — запасной вариант
     Clipboard.setData(ClipboardData(text: json));
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${errorMsg ?? "Неизвестная ошибка"}. План скопирован в буфер')),
+      const SnackBar(content: Text('План скопирован в буфер обмена')),
     );
   }
 
@@ -82,7 +48,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         content: TextField(
           controller: importCtrl,
           maxLines: 5,
-          decoration: const InputDecoration(hintText: 'Вставьте код отчета', border: OutlineInputBorder()),
+          decoration: const InputDecoration(hintText: 'Вставьте JSON отчет', border: OutlineInputBorder()),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('ОТМЕНА')),
@@ -135,12 +101,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             title: Text(_controller.currentExecutor),
             actions: [
               if (isPlanTab) ...[
-                IconButton(icon: const Icon(Icons.upload, color: Colors.red), onPressed: _sendPlan),
+                IconButton(icon: const Icon(Icons.copy, color: Colors.red), onPressed: _copyPlanToClipboard),
                 IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _controller.addTask),
               ],
               if (!isPlanTab) ...[
                 IconButton(icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30), onPressed: _runModeling),
-                IconButton(icon: const Icon(Icons.download_for_offline, color: Colors.green), onPressed: _showImportDialog),
+                IconButton(icon: const Icon(Icons.paste, color: Colors.green), onPressed: _showImportDialog),
               ],
             ],
             bottom: TabBar(controller: _tabController, indicatorColor: Colors.white, tabs: const [Tab(text: 'План'), Tab(text: 'Результат')]),

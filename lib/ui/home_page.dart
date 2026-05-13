@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/io_client.dart';
+import 'dart:convert';
 import '../data/controller.dart';
 import 'task_card_factory.dart';
 import 'widgets/executor_drawer.dart';
@@ -16,25 +19,62 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   final ExecutorController _controller = ExecutorController();
   late TabController _tabController;
+  static const String serverUrl = 'https://127.0.0.1:8000';
+  late final http.Client _client;
 
   @override
   void initState() {
     super.initState();
+    _client = IOClient(
+      HttpClient()..badCertificateCallback = (cert, host, port) => true,
+    );
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() => setState(() {}));
     _controller.init();
+    _startPolling();
   }
 
   @override
   void dispose() {
+    _client.close();
     _tabController.dispose();
     _controller.dispose();
     super.dispose();
   }
 
-  void _sharePlan() {
+  void _startPolling() {
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 3));
+      try {
+        final response = await _client.get(Uri.parse('$serverUrl/report/${_controller.currentExecutor}'));
+        if (response.statusCode == 200 && response.body.isNotEmpty) {
+          _controller.importProgressFromJson(response.body);
+        }
+      } catch (_) {}
+      return true;
+    });
+  }
+
+  Future<void> _sendPlan() async {
     final json = _controller.exportPlanToJson();
-    Share.share(json, subject: 'План работ');
+    try {
+      final response = await _client.post(
+        Uri.parse('$serverUrl/plan'),
+        headers: {'Content-Type': 'application/json'},
+        body: json,
+      );
+      final msg = 'Сервер ответил: ${response.statusCode} ${response.body}';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка отправки: $e')),
+      );
+      // fallback: скопировать в буфер
+      Clipboard.setData(ClipboardData(text: json));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('План скопирован в буфер')),
+      );
+    }
   }
 
   void _showImportDialog() {
@@ -99,7 +139,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             title: Text(_controller.currentExecutor),
             actions: [
               if (isPlanTab) ...[
-                IconButton(icon: const Icon(Icons.share, color: Colors.red), tooltip: 'Поделиться планом', onPressed: _sharePlan),
+                IconButton(icon: const Icon(Icons.cloud_upload, color: Colors.red), tooltip: 'Отправить план', onPressed: _sendPlan),
                 IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _controller.addTask),
               ],
               if (!isPlanTab) ...[

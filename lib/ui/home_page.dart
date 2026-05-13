@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../data/controller.dart';
 import 'task_card_factory.dart';
 import 'widgets/executor_drawer.dart';
@@ -31,12 +32,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     super.dispose();
   }
 
-  void _copyPlanToClipboard() {
+  void _sharePlan() {
     final json = _controller.exportPlanToJson();
-    Clipboard.setData(ClipboardData(text: json));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('План скопирован в буфер обмена')),
-    );
+    Share.share(json, subject: 'План работ');
   }
 
   void _showImportDialog() {
@@ -101,12 +99,12 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             title: Text(_controller.currentExecutor),
             actions: [
               if (isPlanTab) ...[
-                IconButton(icon: const Icon(Icons.copy, color: Colors.red), onPressed: _copyPlanToClipboard),
+                IconButton(icon: const Icon(Icons.share, color: Colors.red), tooltip: 'Поделиться планом', onPressed: _sharePlan),
                 IconButton(icon: const Icon(Icons.add_circle_outline), onPressed: _controller.addTask),
               ],
               if (!isPlanTab) ...[
                 IconButton(icon: const Icon(Icons.play_circle_fill, color: Colors.yellow, size: 30), onPressed: _runModeling),
-                IconButton(icon: const Icon(Icons.paste, color: Colors.green), onPressed: _showImportDialog),
+                IconButton(icon: const Icon(Icons.paste, color: Colors.green), tooltip: 'Вставить отчёт', onPressed: _showImportDialog),
               ],
             ],
             bottom: TabBar(controller: _tabController, indicatorColor: Colors.white, tabs: const [Tab(text: 'План'), Tab(text: 'Результат')]),

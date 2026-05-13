@@ -16,11 +16,15 @@ jobs:
           channel: 'stable'
 
       # Генерируем недостающие файлы android на лету
-      - run: flutter create . --platforms android --org com.dikobu.prognoz
+            - run: flutter create . --platforms android --org com.dikobu.prognoz
+
+      # Вставляем разрешения на интернет и открытие ссылок прямо в сгенерированный файл
+      - name: Patch Android Manifest for Internet and URLs
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          # Добавляем разрешение на интернет
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.INTERNET" />' $MANIFEST
+          # Добавляем блок <queries> для Android 11+ (чтобы работали ссылки)
+          sed -i '/<application/i \    <queries><intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent></queries>' $MANIFEST
 
       - run: flutter build apk --release
-      
-      - uses: actions/upload-artifact@v4
-        with:
-          name: prognoz-apk
-          path: build/app/outputs/flutter-apk/app-release.apk

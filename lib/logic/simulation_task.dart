@@ -9,30 +9,24 @@ class SimulationTask {
   double? actualDuration;
   DateTime? actualEndDate;
 
-  // Поля лесоустройства (используются в UI и для отчетов)
-  String plantingType;      // Тип посадки (Сеянцы, саженцы и т.д.)
-  String culture;           // Культура (Вяз, Ясень, Тополь и т.д.)
-  double? plantingQuantity; // Количество (шт)
-  double? plantingArea;     // Площадь (га)
-  
-  String sowingBreed;       // Порода при посеве
-  double? sowingQuantityKg; // Количество семян (кг)
-  double? sowingAreaHa;     // Площадь посева (га)
-  
-  double? cuttingArea;      // Площадь рубки
-  double? cuttingVolume;    // Объем рубки (м3)
-  
+  // Поля лесоустройства
+  String plantingType;
+  String culture;
+  double? plantingQuantity;
+  double? plantingArea;
+  String sowingBreed;
+  double? sowingQuantityKg;
+  double? sowingAreaHa;
+  double? cuttingArea;
+  double? cuttingVolume;
   double? clearCuttingArea;
   double? clearCuttingVolume;
-  
-  double? clearingArea;     // Очистка
+  double? clearingArea;
   double? clearingVolume;
-  
-  int? panelsQuantity;      // Количество аншлагов
-  
-  String location;          // Местонахождение
-  int? quarter;             // Квартал
-  int? allotment;           // Выдел
+  int? panelsQuantity;
+  String location;
+  int? quarter;
+  int? allotment;
 
   SimulationTask({
     required this.id,
@@ -63,7 +57,6 @@ class SimulationTask {
     this.allotment,
   });
 
-  // Фабричный метод для создания объекта из JSON (загрузка из Hive/Сервера)
   factory SimulationTask.fromJson(Map<String, dynamic> json) {
     return SimulationTask(
       id: json['id'] ?? 0,
@@ -95,7 +88,6 @@ class SimulationTask {
     );
   }
 
-  // Метод для преобразования объекта в JSON (сохранение в Hive/Сервер)
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,

@@ -6,6 +6,8 @@ import '../logic/gantt_task_data.dart';
 import '../logic/risk_impact.dart';
 import '../logic/monte_carlo_engine.dart';
 import '../ui/constants.dart';
+// Предполагается, что методы API импортируются отсюда
+import 'server_api.dart'; 
 
 class ExecutorController extends ChangeNotifier {
   late Box _box;
@@ -19,6 +21,9 @@ class ExecutorController extends ChangeNotifier {
   DateTime startDate = DateTime.now();
   List<RiskImpact> topRisks = [];
   bool isInitialized = false;
+  
+  // Флаг для индикации процесса загрузки с сервера
+  bool isFetching = false;
 
   Future<void> init() async {
     _box = Hive.box('prognoz_box');
@@ -43,331 +48,102 @@ class ExecutorController extends ChangeNotifier {
       ganttData = {};
       topRisks = [];
       startDate = DateTime.now();
-      notifyListeners();
-      return;
-    }
-    final stored = _box.get('exec_$currentExecutor');
-    if (stored != null) {
-      tasks = (stored as List).map((t) => SimulationTask.fromMap(t)).toList();
     } else {
-      tasks = [];
+      var data = _box.get('tasks_$currentExecutor');
+      if (data != null) {
+        var list = jsonDecode(data) as List;
+        tasks = list.map((e) => SimulationTask.fromJson(e)).toList();
+      } else {
+        tasks = [];
+      }
+      
+      var sDate = _box.get('start_date_$currentExecutor');
+      startDate = sDate != null ? DateTime.parse(sDate) : DateTime.now();
+      
+      runSimulation();
     }
-    final storedDate = _box.get('date_exec_$currentExecutor');
-    if (storedDate != null) startDate = DateTime.parse(storedDate);
-    else startDate = DateTime.now();
-    resultText = '';
-    ganttData = {};
-    topRisks = [];
     notifyListeners();
   }
 
   void saveData() {
     if (currentExecutor.isEmpty) return;
-    _box.put('exec_$currentExecutor', tasks.map((t) => t.toMap()).toList());
+    _box.put('tasks_$currentExecutor', jsonEncode(tasks.map((e) => e.toJson()).toList()));
+    _box.put('start_date_$currentExecutor', startDate.toIso8601String());
   }
 
-  void saveExecutorsList() {
-    _box.put('executors_list', executors);
-  }
-
-  void setStartDate(DateTime date) {
-    startDate = date;
-    if (currentExecutor.isNotEmpty) {
-      _box.put('date_exec_$currentExecutor', date.toIso8601String());
-    }
-    if (ganttData.isNotEmpty) runSimulation();
-    notifyListeners();
-  }
-
-  void createNewExecutor(String name) {
-    if (name.isEmpty || executors.contains(name)) return;
-    executors.add(name);
-    currentExecutor = name;
-    saveExecutorsList();
-    loadData();
-  }
-
-  void deleteExecutor(String name) {
-    if (!executors.contains(name)) return;
-    _box.delete('exec_$name');
-    _box.delete('date_exec_$name');
-    executors.remove(name);
-    if (currentExecutor == name) {
-      currentExecutor = executors.isNotEmpty ? executors.first : '';
-      loadData();
-    } else {
-      saveExecutorsList();
-      notifyListeners();
-    }
-  }
-
-  void addTask() {
+  // МЕТОД РУЧНОГО ОБНОВЛЕНИЯ
+  Future<void> fetchReportFromServer() async {
     if (currentExecutor.isEmpty) return;
-    String newId = (tasks.length + 1).toString();
-    tasks.add(SimulationTask(id: newId, name: workNames.first));
-    saveData();
-    resultText = '';
-    ganttData = {};
-    p90Duration = 0;
-    topRisks = [];
+    
+    isFetching = true;
     notifyListeners();
-  }
 
-  void removeTask(int index) {
-    tasks.removeAt(index);
-    for (int i = 0; i < tasks.length; i++)
-      tasks[i].id = (i + 1).toString();
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskTitle(int index, String title) {
-    tasks[index].name = title;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskValues(int index, String key, double val) {
-    if (key == 'min') tasks[index].min = val;
-    if (key == 'likely') tasks[index].likely = val;
-    if (key == 'max') tasks[index].max = val;
-    saveData();
-  }
-
-  void updateTaskDepends(int index, String dependsStr) {
-    tasks[index].dependsOn = dependsStr.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    saveData();
-  }
-
-  void updateTaskCompletion(int index, bool val) {
-    tasks[index].isCompleted = val;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskActualDuration(int index, double val) {
-    tasks[index].actualDuration = val;
-    saveData();
-  }
-
-  void updateTaskPlantingType(int index, String? value) {
-    tasks[index].plantingType = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskCulture(int index, String? value) {
-    tasks[index].culture = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskPlantingQuantity(int index, double value) {
-    tasks[index].plantingQuantity = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskPlantingArea(int index, double value) {
-    tasks[index].plantingArea = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskSowingBreed(int index, String? value) {
-    tasks[index].sowingBreed = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskSowingQuantityKg(int index, double value) {
-    tasks[index].sowingQuantityKg = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskSowingAreaHa(int index, double value) {
-    tasks[index].sowingAreaHa = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskCuttingArea(int index, double value) {
-    tasks[index].cuttingArea = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskCuttingVolume(int index, double value) {
-    tasks[index].cuttingVolume = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskClearCuttingArea(int index, double value) {
-    tasks[index].clearCuttingArea = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskClearCuttingVolume(int index, double value) {
-    tasks[index].clearCuttingVolume = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskClearingArea(int index, double value) {
-    tasks[index].clearingArea = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskClearingVolume(int index, double value) {
-    tasks[index].clearingVolume = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskPanelsQuantity(int index, double value) {
-    tasks[index].panelsQuantity = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskLocation(int index, String value) {
-    tasks[index].location = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskQuarter(int index, String value) {
-    tasks[index].quarter = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void updateTaskAllotment(int index, String value) {
-    tasks[index].allotment = value;
-    saveData();
-    notifyListeners();
-  }
-
-  void importProgressFromJson(String jsonString) {
     try {
-      Map<String, dynamic> incomingData = jsonDecode(jsonString);
-      bool updated = false;
-      for (int i = 0; i < tasks.length; i++) {
-        String taskId = tasks[i].id;
-        if (incomingData.containsKey(taskId) || incomingData.containsKey(tasks[i].name)) {
-          var taskUpdate = incomingData[taskId] ?? incomingData[tasks[i].name];
-          if (taskUpdate.containsKey('completed')) tasks[i].isCompleted = taskUpdate['completed'];
-          if (taskUpdate.containsKey('actual')) tasks[i].actualDuration = (taskUpdate['actual'] as num).toDouble();
-          if (taskUpdate.containsKey('actualEndDate')) {
-            tasks[i].actualEndDate = DateTime.tryParse(taskUpdate['actualEndDate']);
+      // Запрашиваем данные отчета (GET /report/исполнитель)
+      final String? jsonResponse = await fetchPlan(currentExecutor); 
+      
+      if (jsonResponse != null && jsonResponse != '[]') {
+        final List<dynamic> decodedReport = jsonDecode(jsonResponse);
+        
+        bool hasChanges = false;
+        for (var reportItem in decodedReport) {
+          // Ищем задачу в локальном списке по ID
+          final taskId = reportItem['id'];
+          final index = tasks.indexWhere((t) => t.id == taskId);
+          
+          if (index != -1) {
+            // Обновляем прогресс и статус
+            tasks[index].isCompleted = reportItem['isCompleted'] ?? false;
+            if (reportItem['actualDuration'] != null) {
+              tasks[index].actualDuration = (reportItem['actualDuration'] as num).toDouble();
+            }
+            hasChanges = true;
           }
-          updated = true;
+        }
+        
+        if (hasChanges) {
+          saveData();
+          runSimulation(); // Пересчитываем прогноз на основе новых данных
         }
       }
-      if (updated) {
-        saveData();
-        // Убираем автоматическое моделирование
-        notifyListeners();
-      }
     } catch (e) {
-      resultText = "❌ Ошибка импорта: неверный формат отчета.";
+      debugPrint("Ошибка при загрузке отчета: $e");
+    } finally {
+      isFetching = false;
       notifyListeners();
     }
-  }
-
-  String exportPlanToJson() {
-    final plan = tasks.map((t) {
-      final map = {
-        'id': t.id,
-        'name': t.name,
-        'min': t.min,
-        'likely': t.likely,
-        'max': t.max,
-        'dependsOn': t.dependsOn,
-        'workType': t.name,
-        'executor': currentExecutor,
-        if (t.location != null) 'location': t.location,
-        if (t.quarter != null) 'quarter': t.quarter,
-        if (t.allotment != null) 'allotment': t.allotment,
-      };
-      if (t.name == 'Посадка') {
-        map['plantingType'] = t.plantingType as dynamic;
-        map['culture'] = t.culture as dynamic;
-        map['plantingQuantity'] = t.plantingQuantity as dynamic;
-        map['plantingArea'] = t.plantingArea as dynamic;
-      }
-      if (t.name == 'Посев') {
-        map['sowingBreed'] = t.sowingBreed as dynamic;
-        map['sowingQuantityKg'] = t.sowingQuantityKg as dynamic;
-        map['sowingAreaHa'] = t.sowingAreaHa as dynamic;
-      }
-      if (t.name == 'Выборочная санитарная рубка') {
-        map['cuttingArea'] = t.cuttingArea as dynamic;
-        map['cuttingVolume'] = t.cuttingVolume as dynamic;
-      }
-      if (t.name == 'Сплошная санитарная рубка') {
-        map['clearCuttingArea'] = t.clearCuttingArea as dynamic;
-        map['clearCuttingVolume'] = t.clearCuttingVolume as dynamic;
-      }
-      if (t.name == 'Уборка захламленности') {
-        map['clearingArea'] = t.clearingArea as dynamic;
-        map['clearingVolume'] = t.clearingVolume as dynamic;
-      }
-      if (t.name == 'Установка панно и аншлагов') {
-        map['panelsQuantity'] = t.panelsQuantity as dynamic;
-      }
-      return map;
-    }).toList();
-    return jsonEncode(plan);
   }
 
   void runSimulation() {
-    topRisks = [];
-    if (tasks.isEmpty) return;
+    if (tasks.isEmpty) {
+      resultText = "Добавьте этапы для расчета";
+      ganttData = {};
+      notifyListeners();
+      return;
+    }
+
+    // Валидация перед расчетом
     for (var t in tasks) {
       if (!t.isCompleted) {
-        if (t.min == 0 && t.likely == 0 && t.max == 0) {
-          resultText = "ОШИБКА: Заполните цифры в этапе ${t.id}!";
-          ganttData = {};
-          notifyListeners();
+        if (t.min <= 0 || t.likely <= 0 || t.max <= 0) {
+          resultText = "ОШИБКА: Параметры времени должны быть больше 0";
           return;
         }
         if (!(t.min <= t.likely && t.likely <= t.max)) {
-          resultText = "ОШИБКА в этапе ${t.id}:\nПравило 'Мин <= Норма <= Макс' нарушено!";
-          ganttData = {};
-          notifyListeners();
+          resultText = "ОШИБКА в этапе ${t.id}: Нарушено правило Мин <= Норма <= Макс";
           return;
         }
       }
     }
 
-    double p90 = MonteCarloEngine.calculate(tasks);
-    final baseline = MonteCarloEngine.calculateBaselinePlan(tasks);
+    p90Duration = MonteCarloEngine.calculate(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
-
-    // Проверка срыва сроков (уже дублируется в RunSimulation, но оставим)
-    String deadlineWarnings = '';
-    for (var t in tasks) {
-      if (t.isCompleted && t.actualEndDate != null) {
-        DateTime plannedEnd = startDate.add(Duration(days: t.likely.toInt()));
-        if (t.actualEndDate!.isAfter(plannedEnd)) {
-          deadlineWarnings += '⚠️ Срыв срока: «${t.name}» – план ${plannedEnd.day.toString().padLeft(2,'0')}.${plannedEnd.month.toString().padLeft(2,'0')}, факт ${t.actualEndDate!.day.toString().padLeft(2,'0')}.${t.actualEndDate!.month.toString().padLeft(2,'0')}\n';
-        }
-      }
-    }
-
-    DateTime finishDate = startDate.add(Duration(days: p90.ceil()));
-    String fDay = finishDate.day.toString().padLeft(2, '0');
-    String fMonth = finishDate.month.toString().padLeft(2, '0');
-
-    resultText = (deadlineWarnings.isNotEmpty ? deadlineWarnings + '\n' : '') +
-        "ФИНИШ (90%): $fDay.$fMonth.${finishDate.year} (${p90.toStringAsFixed(1)} дн.)";
-    ganttData = baseline.taskData;
-    p90Duration = p90;
+    
+    // Формирование текста результата
+    DateTime finishDate = startDate.add(Duration(days: p90Duration.ceil()));
+    resultText = "Прогноз завершения (P90): ${finishDate.day}.${finishDate.month}.${finishDate.year}\n"
+                 "Общая длительность: ${p90Duration.toStringAsFixed(1)} дн.";
+    
     notifyListeners();
   }
 }

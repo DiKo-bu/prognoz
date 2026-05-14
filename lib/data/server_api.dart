@@ -26,7 +26,23 @@ Future<String?> fetchPlan(String executorId) async {
       return utf8.decode(response.bodyBytes);
     }
   } catch (e) {
-    print('Error fetching: $e');
+    print('Error fetching plan: $e');
   }
   return null;
+}
+
+Future<bool> sendReport(String executorId, String jsonStr) async {
+  try {
+    final ip = await _resolveHost(serverHost);
+    final url = Uri.http(ip, '/report');
+    final response = await http.post(
+      url,
+      headers: {'Host': serverHost, 'Content-Type': 'application/json; charset=utf-8'},
+      body: jsonStr,
+    );
+    return response.statusCode == 200;
+  } catch (e) {
+    print('Error sending report: $e');
+    return false;
+  }
 }

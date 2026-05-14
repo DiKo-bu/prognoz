@@ -13,8 +13,12 @@ class ExecutorController extends ChangeNotifier {
   List<String> executors = [];
   String currentExecutor = '';
   DateTime startDate = DateTime.now();
+
+  Map<String, GanttTaskData> ganttData = {};
+  double p90Duration = 0;
   String resultText = '';
   List<RiskImpact> topRisks = [];
+  
   bool isInitialized = false;
   bool isFetching = false;
 
@@ -24,82 +28,6 @@ class ExecutorController extends ChangeNotifier {
     if (executors.isNotEmpty) currentExecutor = executors.first;
     loadData();
     isInitialized = true;
-    notifyListeners();
-  }
-
-  // Методы управления списком исполнителей
-  void createNewExecutor(String name) {
-    if (name.isEmpty || executors.contains(name)) return;
-    executors.add(name);
-    currentExecutor = name;
-    _box.put('executors_list', executors);
-    loadData();
-  }
-
-  void deleteExecutor(String name) {
-    executors.remove(name);
-    _box.delete('tasks_$name');
-    _box.put('executors_list', executors);
-    if (currentExecutor == name) {
-      currentExecutor = executors.isNotEmpty ? executors.first : '';
-    }
-    loadData();
-  }
-
-  // Управление задачами
-  void addTask() {
-    int nextId = tasks.isEmpty ? 1 : tasks.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1;
-    tasks.add(SimulationTask(id: nextId, name: 'Новый этап $nextId', min: 1, likely: 2, max: 3));
-    saveData();
-  }
-
-  void removeTask(int index) {
-    tasks.removeAt(index);
-    saveData();
-  }
-
-  // Методы обновления (вызываются из UI)
-  void updateTaskTitle(int index, String val) { tasks[index].name = val; saveData(); }
-  void updateTaskCompletion(int index, bool val) { tasks[index].isCompleted = val; saveData(); }
-  void updateTaskActualDuration(int index, double val) { tasks[index].actualDuration = val; saveData(); }
-  void updateTaskDepends(int index, String val) {
-    tasks[index].dependsOn = val.split(',').map((e) => int.tryParse(e.trim())).whereType<int>().toList();
-    saveData();
-  }
-  void updateTaskValues(int index, String key, double val) {
-    if (key == 'min') tasks[index].min = val;
-    if (key == 'likely') tasks[index].likely = val;
-    if (key == 'max') tasks[index].max = val;
-    saveData();
-  }
-
-  // Поля лесоустройства
-  void updateTaskPlantingType(int index, String val) { tasks[index].plantingType = val; saveData(); }
-  void updateTaskCulture(int index, String val) { tasks[index].culture = val; saveData(); }
-  void updateTaskLocation(int index, String val) { tasks[index].location = val; saveData(); }
-  void updateTaskQuarter(int index, int? val) { tasks[index].quarter = val; saveData(); }
-  void updateTaskAllotment(int index, int? val) { tasks[index].allotment = val; saveData(); }
-
-  void setStartDate(DateTime date) { startDate = date; saveData(); }
-
-  // Импорт / Экспорт
-  String exportPlanToJson() => jsonEncode(tasks.map((e) => e.toJson()).toList());
-  void importProgressFromJson(String jsonStr) {
-    try {
-      var list = jsonDecode(jsonStr) as List;
-      tasks = list.map((e) => SimulationTask.fromJson(e)).toList();
-      saveData();
-    } catch (_) {}
-  }
-
-  // Работа с сервером
-  Future<void> fetchReportFromServer() async {
-    if (currentExecutor.isEmpty) return;
-    isFetching = true;
-    notifyListeners();
-    final data = await fetchPlan(currentExecutor);
-    if (data != null) importProgressFromJson(data);
-    isFetching = false;
     notifyListeners();
   }
 
@@ -126,10 +54,105 @@ class ExecutorController extends ChangeNotifier {
     runSimulation();
   }
 
+  void createNewExecutor(String name) {
+    if (name.isEmpty || executors.contains(name)) return;
+    executors.add(name);
+    currentExecutor = name;
+    _box.put('executors_list', executors);
+    loadData();
+  }
+
+  void deleteExecutor(String name) {
+    executors.remove(name);
+    _box.delete('tasks_$name');
+    _box.put('executors_list', executors);
+    if (currentExecutor == name) {
+      currentExecutor = executors.isNotEmpty ? executors.first : '';
+    }
+    loadData();
+  }
+
+  void addTask() {
+    int nextId = tasks.isEmpty ? 1 : tasks.fold(0, (max, e) => e.id > max ? e.id : max) + 1;
+    tasks.add(SimulationTask(id: nextId, name: 'Новый этап $nextId', min: 1, likely: 2, max: 3));
+    saveData();
+  }
+
+  void removeTask(int index) {
+    tasks.removeAt(index);
+    saveData();
+  }
+
+  // Обновление полей из UI
+  void updateTaskTitle(int index, String val) { tasks[index].name = val; saveData(); }
+  void updateTaskCompletion(int index, bool val) { tasks[index].isCompleted = val; saveData(); }
+  void updateTaskActualDuration(int index, double val) { tasks[index].actualDuration = val; saveData(); }
+  
+  void updateTaskDepends(int index, String val) {
+    tasks[index].dependsOn = val.split(',').map((e) => int.tryParse(e.trim())).whereType<int>().toList();
+    saveData();
+  }
+
+  void updateTaskValues(int index, String key, double val) {
+    if (key == 'min') tasks[index].min = val;
+    if (key == 'likely') tasks[index].likely = val;
+    if (key == 'max') tasks[index].max = val;
+    saveData();
+  }
+
+  // Методы лесоустройства (требуются для task_card_factory.dart)
+  void updateTaskPlantingType(int index, String? val) { tasks[index].plantingType = val ?? 'Сеянцы'; saveData(); }
+  void updateTaskCulture(int index, String? val) { tasks[index].culture = val ?? 'Вяз'; saveData(); }
+  void updateTaskPlantingQuantity(int index, double val) { tasks[index].plantingQuantity = val; saveData(); }
+  void updateTaskPlantingArea(int index, double val) { tasks[index].plantingArea = val; saveData(); }
+  void updateTaskSowingBreed(int index, String val) { tasks[index].sowingBreed = val; saveData(); }
+  void updateTaskSowingQuantityKg(int index, double val) { tasks[index].sowingQuantityKg = val; saveData(); }
+  void updateTaskSowingAreaHa(int index, double val) { tasks[index].sowingAreaHa = val; saveData(); }
+  void updateTaskCuttingArea(int index, double val) { tasks[index].cuttingArea = val; saveData(); }
+  void updateTaskCuttingVolume(int index, double val) { tasks[index].cuttingVolume = val; saveData(); }
+  void updateTaskClearCuttingArea(int index, double val) { tasks[index].clearCuttingArea = val; saveData(); }
+  void updateTaskClearCuttingVolume(int index, double val) { tasks[index].clearCuttingVolume = val; saveData(); }
+  void updateTaskClearingArea(int index, double val) { tasks[index].clearingArea = val; saveData(); }
+  void updateTaskClearingVolume(int index, double val) { tasks[index].clearingVolume = val; saveData(); }
+  void updateTaskPanelsQuantity(int index, int val) { tasks[index].panelsQuantity = val; saveData(); }
+  void updateTaskLocation(int index, String val) { tasks[index].location = val; saveData(); }
+  void updateTaskQuarter(int index, String val) { tasks[index].quarter = int.tryParse(val); saveData(); }
+  void updateTaskAllotment(int index, String val) { tasks[index].allotment = int.tryParse(val); saveData(); }
+
+  void setStartDate(DateTime date) { startDate = date; saveData(); }
+
+  String exportPlanToJson() => jsonEncode(tasks.map((e) => e.toJson()).toList());
+  
+  void importProgressFromJson(String jsonStr) {
+    try {
+      var list = jsonDecode(jsonStr) as List;
+      tasks = list.map((e) => SimulationTask.fromJson(e)).toList();
+      saveData();
+    } catch (_) {}
+  }
+
+  Future<void> fetchReportFromServer() async {
+    if (currentExecutor.isEmpty) return;
+    isFetching = true;
+    notifyListeners();
+    final data = await fetchPlan(currentExecutor);
+    if (data != null) importProgressFromJson(data);
+    isFetching = false;
+    notifyListeners();
+  }
+
   void runSimulation() {
-    if (tasks.isEmpty) { resultText = "Нет данных"; notifyListeners(); return; }
-    double p90 = MonteCarloEngine.calculate(tasks);
-    DateTime finishDate = startDate.add(Duration(days: p90.ceil()));
+    if (tasks.isEmpty) {
+      resultText = "Нет данных";
+      ganttData = {};
+      p90Duration = 0;
+      notifyListeners();
+      return;
+    }
+    p90Duration = MonteCarloEngine.calculate(tasks);
+    ganttData = MonteCarloEngine.calculateBaselinePlan(tasks); 
+    topRisks = MonteCarloEngine.calculateRisks(tasks);
+    DateTime finishDate = startDate.add(Duration(days: p90Duration.ceil()));
     resultText = "Прогноз (P90): ${finishDate.day}.${finishDate.month}.${finishDate.year}";
     notifyListeners();
   }

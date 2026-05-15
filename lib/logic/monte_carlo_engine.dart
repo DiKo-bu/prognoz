@@ -1,129 +1,84 @@
 import 'dart:math';
 import 'simulation_task.dart';
 import 'gantt_task_data.dart';
-import 'baseline_plan.dart';
 import 'risk_impact.dart';
 
 class MonteCarloEngine {
-  static double calculate(List<SimulationTask> tasks, {int iterations = 50000}) {
-    if (tasks.isEmpty) return 0;
-    final rnd = Random();
+  static double calculate(List<SimulationTask> tasks, {int iterations = 1000}) {
+    Random rnd = Random();
     List<double> results = [];
-
     for (int i = 0; i < iterations; i++) {
-      Map<String, double> endTimes = {};
-      double maxProjectTime = 0;
-
-      double resolveTask(SimulationTask task, Set<String> stack) {
-        if (endTimes.containsKey(task.id)) return endTimes[task.id]!;
-        if (stack.contains(task.id)) return 0;
-        stack.add(task.id);
-        double startTime = 0;
-        for (var depId in task.dependsOn) {
-          try {
-            var depTask = tasks.firstWhere((t) => t.id == depId);
-            startTime = max(startTime, resolveTask(depTask, stack));
-          } catch(e) {}
-        }
-        stack.remove(task.id);
-        double endTime = startTime + task.getSample(rnd);
-        endTimes[task.id] = endTime;
-        return endTime;
-      }
-
-      for (var task in tasks) {
-        maxProjectTime = max(maxProjectTime, resolveTask(task, <String>{}));
-      }
-      results.add(maxProjectTime);
+      results.add(_runSingleIteration(tasks, rnd));
     }
     results.sort();
-    return results[(iterations * 0.9).toInt()];
+    return results[(iterations * 0.9).floor()];
   }
 
-  static BaselinePlan calculateBaselinePlan(List<SimulationTask> tasks) {
-    if (tasks.isEmpty) return BaselinePlan(taskData: {}, totalDuration: 0);
-    Map<String, GanttTaskData> taskData = {};
-    Map<String, double> endTimes = {};
-    double totalDuration = 0;
+  static double _runSingleIteration(List<SimulationTask> tasks, Random rnd) {
+    Map<int, double> endTimes = {};
+    double totalMax = 0;
 
-    double resolveTask(SimulationTask task, Set<String> stack) {
-      if (endTimes.containsKey(task.id)) return endTimes[task.id]!;
-      if (stack.contains(task.id)) return 0;
-      stack.add(task.id);
+    void process(SimulationTask task) {
+      if (endTimes.containsKey(task.id)) return;
       double startTime = 0;
-      for (var depId in task.dependsOn) {
-        try {
-          var depTask = tasks.firstWhere((t) => t.id == depId);
-          startTime = max(startTime, resolveTask(depTask, stack));
-        } catch(e) {}
+      for (int depId in task.dependsOn) {
+        var depTask = tasks.firstWhere((t) => t.id == depId, orElse: () => task);
+        if (depTask.id != task.id) {
+          process(depTask);
+          startTime = max(startTime, endTimes[depTask.id]!);
+        }
       }
-      stack.remove(task.id);
-      double endTime = startTime + (task.isCompleted ? task.actualDuration : task.likely);
+      double duration = task.isCompleted ? (task.actualDuration ?? task.likely) : task.getSample(rnd);
+      double endTime = startTime + duration;
       endTimes[task.id] = endTime;
-      bool overMax = task.isCompleted && task.actualDuration > task.max;
+      totalMax = max(totalMax, endTime);
+    }
+
+    for (var t in tasks) process(t);
+    return totalMax;
+  }
+
+  static Map<int, GanttTaskData> calculateBaselinePlan(List<SimulationTask> tasks) {
+    Map<int, double> endTimes = {};
+    Map<int, GanttTaskData> taskData = {};
+
+    void process(SimulationTask task) {
+      if (endTimes.containsKey(task.id)) return;
+      double startTime = 0;
+      for (int depId in task.dependsOn) {
+        var depTask = tasks.firstWhere((t) => t.id == depId, orElse: () => task);
+        if (depTask.id != task.id) {
+          process(depTask);
+          startTime = max(startTime, endTimes[depTask.id]!);
+        }
+      }
+      double duration = task.isCompleted ? (task.actualDuration ?? task.likely) : task.likely;
+      double endTime = startTime + duration;
+      endTimes[task.id] = endTime;
       taskData[task.id] = GanttTaskData(
+        taskId: task.id.toString(),
         name: task.name,
         startTime: startTime,
         endTime: endTime,
         isCompleted: task.isCompleted,
-        isOverMax: overMax,
       );
-      return endTime;
     }
 
-    for (var task in tasks) {
-      totalDuration = max(totalDuration, resolveTask(task, <String>{}));
-    }
-    return BaselinePlan(taskData: taskData, totalDuration: totalDuration);
+    for (var t in tasks) process(t);
+    return taskData;
   }
 
   static List<RiskImpact> calculateRisks(List<SimulationTask> tasks) {
-    if (tasks.isEmpty) return [];
-
-    double calcWithOverrides(Map<String, double> overrides) {
-      Map<String, double> endTimes = {};
-      double maxTime = 0;
-      double resolveTask(SimulationTask task, Set<String> stack) {
-        if (endTimes.containsKey(task.id)) return endTimes[task.id]!;
-        if (stack.contains(task.id)) return 0;
-        stack.add(task.id);
-        double startTime = 0;
-        for (var depId in task.dependsOn) {
-          try {
-            var depTask = tasks.firstWhere((t) => t.id == depId);
-            startTime = max(startTime, resolveTask(depTask, stack));
-          } catch(e) {}
-        }
-        stack.remove(task.id);
-        double duration = task.isCompleted ? task.actualDuration : (overrides.containsKey(task.id) ? overrides[task.id]! : task.likely);
-        double endTime = startTime + duration;
-        endTimes[task.id] = endTime;
-        return endTime;
-      }
-      for (var task in tasks) { maxTime = max(maxTime, resolveTask(task, <String>{})); }
-      return maxTime;
-    }
-
-    double baselineDuration = calcWithOverrides({});
+    double baseline = calculate(tasks, iterations: 100);
     List<RiskImpact> risks = [];
-
-    for (var task in tasks) {
-      if (task.isCompleted || task.max <= task.likely) continue;
-      double worstCaseDuration = calcWithOverrides({task.id: task.max});
-      double impact = worstCaseDuration - baselineDuration;
-      if (impact > 0.1) {
-        risks.add(RiskImpact(taskName: task.name, impactDays: impact));
-      }
+    for (var t in tasks.where((task) => !task.isCompleted)) {
+      double originalLikely = t.likely;
+      t.likely = t.max; // Симулируем худший сценарий для задачи
+      double impact = calculate(tasks, iterations: 100) - baseline;
+      t.likely = originalLikely;
+      if (impact > 0) risks.add(RiskImpact(taskName: t.name, impactDays: impact));
     }
-
-    for (var task in tasks) {
-      if (task.isCompleted && task.actualDuration > task.max) {
-        double over = task.actualDuration - task.max;
-        risks.add(RiskImpact(taskName: task.name, impactDays: over));
-      }
-    }
-
     risks.sort((a, b) => b.impactDays.compareTo(a.impactDays));
-    return risks.take(3).toList();
+    return risks;
   }
 }

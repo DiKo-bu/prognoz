@@ -24,11 +24,12 @@ class CompletedTasksView extends StatelessWidget {
   }
 
   Widget _buildTaskCard(SimulationTask task) {
-    DateTime plannedEnd = startDate.add(Duration(days: task.likely.toInt()));
-    bool completed = task.isCompleted;
-    bool overMax = completed && task.actualDuration > task.max;
-    bool deadlineViolation =
-        completed && task.actualEndDate != null && task.actualEndDate!.isAfter(plannedEnd);
+    final plannedEnd = startDate.add(Duration(days: task.likely.toInt()));
+    final completed = task.isCompleted;
+    final overMax = completed && (task.actualDuration ?? 0) > task.max;
+    final deadlineViolation = completed &&
+        task.actualEndDate != null &&
+        task.actualEndDate!.isAfter(plannedEnd);
 
     Color borderColor;
     String statusText;

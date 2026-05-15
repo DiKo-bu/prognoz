@@ -1,7 +1,7 @@
 import 'dart:math';
 
 class SimulationTask {
-  int id; // ID задачи
+  int id;
   String name;
 
   double min;
@@ -14,7 +14,6 @@ class SimulationTask {
   double? actualDuration;
   DateTime? actualEndDate;
 
-  // Лесоустройство
   String plantingType;
   String culture;
 
@@ -69,10 +68,9 @@ class SimulationTask {
     this.allotment,
   });
 
-  /// Треугольное распределение
   double getSample(Random rnd) {
-    double u = rnd.nextDouble();
-    double f = (likely - min) / (max - min);
+    final u = rnd.nextDouble();
+    final f = (likely - min) / (max - min);
 
     if (u <= f) {
       return min + sqrt(u * (max - min) * (likely - min));
@@ -88,50 +86,37 @@ class SimulationTask {
       min: (json['min'] as num?)?.toDouble() ?? 1.0,
       likely: (json['likely'] as num?)?.toDouble() ?? 2.0,
       max: (json['max'] as num?)?.toDouble() ?? 3.0,
-
       dependsOn: json['dependsOn'] is List
           ? (json['dependsOn'] as List)
               .map((e) => int.tryParse(e.toString()))
               .whereType<int>()
               .toList()
           : [],
-
       isCompleted: json['isCompleted'] == true,
-
       actualDuration: (json['actualDuration'] as num?)?.toDouble(),
       actualEndDate: json['actualEndDate'] != null
           ? DateTime.tryParse(json['actualEndDate'])
           : null,
-
       plantingType: json['plantingType']?.toString() ?? 'Сеянцы',
       culture: json['culture']?.toString() ?? 'Вяз',
-
       plantingQuantity: (json['plantingQuantity'] as num?)?.toDouble(),
       plantingArea: (json['plantingArea'] as num?)?.toDouble(),
-
       sowingBreed: json['sowingBreed']?.toString() ?? '',
       sowingQuantityKg: (json['sowingQuantityKg'] as num?)?.toDouble(),
       sowingAreaHa: (json['sowingAreaHa'] as num?)?.toDouble(),
-
       cuttingArea: (json['cuttingArea'] as num?)?.toDouble(),
       cuttingVolume: (json['cuttingVolume'] as num?)?.toDouble(),
-
       clearCuttingArea: (json['clearCuttingArea'] as num?)?.toDouble(),
       clearCuttingVolume: (json['clearCuttingVolume'] as num?)?.toDouble(),
-
       clearingArea: (json['clearingArea'] as num?)?.toDouble(),
       clearingVolume: (json['clearingVolume'] as num?)?.toDouble(),
-
       panelsQuantity: json['panelsQuantity'] is int
           ? json['panelsQuantity']
           : int.tryParse(json['panelsQuantity']?.toString() ?? ''),
-
       location: json['location']?.toString() ?? '',
-
       quarter: json['quarter'] is int
           ? json['quarter']
           : int.tryParse(json['quarter']?.toString() ?? ''),
-
       allotment: json['allotment'] is int
           ? json['allotment']
           : int.tryParse(json['allotment']?.toString() ?? ''),

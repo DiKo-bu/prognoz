@@ -1,3 +1,13 @@
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'dart:convert';
+
+import '../logic/simulation_task.dart';
+import '../logic/monte_carlo_engine.dart';
+import '../logic/risk_impact.dart';
+import '../logic/gantt_task_data.dart';
+import 'server_api.dart';
+
 class ExecutorController extends ChangeNotifier {
   late Box _box;
   List<SimulationTask> tasks = [];
@@ -25,7 +35,7 @@ class ExecutorController extends ChangeNotifier {
     if (currentExecutor.isEmpty) {
       tasks = [];
     } else {
-      var data = _box.get('tasks_$currentExecutor');
+      final data = _box.get('tasks_$currentExecutor');
       if (data != null) {
         tasks = (jsonDecode(data) as List)
             .map((e) => SimulationTask.fromJson(e))
@@ -33,8 +43,7 @@ class ExecutorController extends ChangeNotifier {
       } else {
         tasks = [];
       }
-
-      var sDate = _box.get('start_date_$currentExecutor');
+      final sDate = _box.get('start_date_$currentExecutor');
       startDate = sDate != null ? DateTime.parse(sDate) : DateTime.now();
     }
     runSimulation();
@@ -42,17 +51,44 @@ class ExecutorController extends ChangeNotifier {
 
   void saveData() {
     if (currentExecutor.isEmpty) return;
-    _box.put('tasks_$currentExecutor',
-        jsonEncode(tasks.map((e) => e.toJson()).toList()));
+    _box.put(
+      'tasks_$currentExecutor',
+      jsonEncode(tasks.map((e) => e.toJson()).toList()),
+    );
     _box.put('start_date_$currentExecutor', startDate.toIso8601String());
     runSimulation();
   }
 
+  void createNewExecutor(String name) {
+    if (name.isEmpty || executors.contains(name)) return;
+    executors.add(name);
+    currentExecutor = name;
+    _box.put('executors_list', executors);
+    loadData();
+  }
+
+  void deleteExecutor(String name) {
+    executors.remove(name);
+    _box.delete('tasks_$name');
+    _box.put('executors_list', executors);
+    if (currentExecutor == name) {
+      currentExecutor = executors.isNotEmpty ? executors.first : '';
+    }
+    loadData();
+  }
+
   void addTask() {
-    int nextId =
-        tasks.isEmpty ? 1 : tasks.fold(0, (max, e) => e.id > max ? e.id : max) + 1;
-    tasks.add(SimulationTask(
-        id: nextId, name: 'Этап $nextId', min: 1, likely: 2, max: 3));
+    final nextId =
+        tasks.isEmpty ? 1 : tasks.fold<int>(0, (max, e) => e.id > max ? e.id : max) + 1;
+    tasks.add(
+      SimulationTask(
+        id: nextId,
+        name: 'Этап $nextId',
+        min: 1,
+        likely: 2,
+        max: 3,
+      ),
+    );
     saveData();
   }
 
@@ -61,7 +97,6 @@ class ExecutorController extends ChangeNotifier {
     saveData();
   }
 
-  // UI update methods
   void updateTaskTitle(int index, String val) {
     tasks[index].name = val;
     saveData();
@@ -183,6 +218,27 @@ class ExecutorController extends ChangeNotifier {
     saveData();
   }
 
+  String exportPlanToJson() =>
+      jsonEncode(tasks.map((e) => e.toJson()).toList());
+
+  void importProgressFromJson(String jsonStr) {
+    try {
+      final list = jsonDecode(jsonStr) as List;
+      tasks = list.map((e) => SimulationTask.fromJson(e)).toList();
+      saveData();
+    } catch (_) {}
+  }
+
+  Future<void> fetchReportFromServer() async {
+    if (currentExecutor.isEmpty) return;
+    isFetching = true;
+    notifyListeners();
+    final data = await fetchPlan(currentExecutor);
+    if (data != null) importProgressFromJson(data);
+    isFetching = false;
+    notifyListeners();
+  }
+
   void runSimulation() {
     if (tasks.isEmpty) {
       resultText = "Нет данных";
@@ -196,10 +252,9 @@ class ExecutorController extends ChangeNotifier {
     ganttData = MonteCarloEngine.calculateBaselinePlan(tasks);
     topRisks = MonteCarloEngine.calculateRisks(tasks);
 
-    DateTime finishDate = startDate.add(Duration(days: p90Duration.ceil()));
+    final finishDate = startDate.add(Duration(days: p90Duration.ceil()));
     resultText =
         "Прогноз (P90): ${finishDate.day}.${finishDate.month}.${finishDate.year}";
-
     notifyListeners();
   }
 }

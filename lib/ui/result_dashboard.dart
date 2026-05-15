@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import '../data/controller.dart';
 import '../logic/gantt_task_data.dart';
 import '../logic/risk_impact.dart';
+import '../logic/simulation_task.dart';
 import 'gantt_chart.dart';
 
 class ResultDashboard extends StatelessWidget {
@@ -18,23 +20,29 @@ class ResultDashboard extends StatelessWidget {
         "${finishDate.day.toString().padLeft(2, '0')}.${finishDate.month.toString().padLeft(2, '0')}.${finishDate.year}";
 
     final overMaxTasks = controller.tasks
-        .where((t) => t.isCompleted && t.actualDuration > t.max)
+        .where((SimulationTask t) =>
+            t.isCompleted && (t.actualDuration ?? 0) > t.max)
         .toList();
 
-    // Собираем предупреждения о срыве сроков (уже есть в контроллере, но продублируем)
     String deadlineWarnings = '';
-    for (var t in controller.tasks) {
+    for (final t in controller.tasks) {
       if (t.isCompleted && t.actualEndDate != null) {
-        DateTime plannedEnd = start.add(Duration(days: t.likely.toInt()));
+        final plannedEnd = start.add(Duration(days: t.likely.toInt()));
         if (t.actualEndDate!.isAfter(plannedEnd)) {
-          deadlineWarnings += '⚠️ Срыв срока: «${t.name}» – план ${plannedEnd.day.toString().padLeft(2,'0')}.${plannedEnd.month.toString().padLeft(2,'0')}, факт ${t.actualEndDate!.day.toString().padLeft(2,'0')}.${t.actualEndDate!.month.toString().padLeft(2,'0')}\n';
+          deadlineWarnings +=
+              '⚠️ Срыв срока: «${t.name}» – план ${plannedEnd.day.toString().padLeft(2, '0')}.${plannedEnd.month.toString().padLeft(2, '0')}, факт ${t.actualEndDate!.day.toString().padLeft(2, '0')}.${t.actualEndDate!.month.toString().padLeft(2, '0')}\n';
         }
       }
     }
 
     if (controller.ganttData.isEmpty) {
-      return const Center(child: Text("Нет данных моделирования.\nНажмите ▶️ вверху экрана.",
-          textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)));
+      return const Center(
+        child: Text(
+          "Нет данных моделирования.\nНажмите ▶️ вверху экрана.",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
     }
 
     return SingleChildScrollView(
@@ -42,10 +50,11 @@ class ResultDashboard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Карточка ФИНИШ
           Card(
             elevation: 3,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -54,27 +63,42 @@ class ResultDashboard extends StatelessWidget {
                     children: const [
                       Icon(Icons.flag_circle, color: Colors.green, size: 28),
                       SizedBox(width: 8),
-                      Text("Финиш (90%)", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        "Финиш (90%)",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Text(formattedFinish,
-                      style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.green)),
+                  Text(
+                    formattedFinish,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text("${p90.toStringAsFixed(1)} рабочих дней",
-                      style: const TextStyle(fontSize: 16, color: Colors.grey)),
+                  Text(
+                    "${p90.toStringAsFixed(1)} рабочих дней",
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Предупреждения о срывах сроков
           if (deadlineWarnings.isNotEmpty) ...[
             const SizedBox(height: 12),
             Card(
               color: Colors.red.shade50,
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -82,26 +106,40 @@ class ResultDashboard extends StatelessWidget {
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.red, size: 24),
                         SizedBox(width: 8),
-                        Text("Нарушения сроков", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(
+                          "Нарушения сроков",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Text(deadlineWarnings, style: const TextStyle(fontSize: 14, color: Colors.red)),
+                    Text(
+                      deadlineWarnings,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.red,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ],
 
-          // Превышения максимума
           if (overMaxTasks.isNotEmpty) ...[
             const SizedBox(height: 12),
             Card(
               color: Colors.orange.shade50,
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -109,39 +147,50 @@ class ResultDashboard extends StatelessWidget {
                   children: [
                     Row(
                       children: const [
-                        Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
+                        Icon(Icons.warning_amber_rounded,
+                            color: Colors.orange, size: 24),
                         SizedBox(width: 8),
-                        Text("Превышения максимума", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(
+                          "Превышения максимума",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...overMaxTasks.map((t) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 18),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  "${t.name}: факт ${t.actualDuration} дн. > макс ${t.max} дн.",
-                                  style: const TextStyle(fontSize: 14),
-                                ),
+                    ...overMaxTasks.map(
+                      (t) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.error_outline,
+                                color: Colors.red, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "${t.name}: факт ${t.actualDuration} дн. > макс ${t.max} дн.",
+                                style: const TextStyle(fontSize: 14),
                               ),
-                            ],
-                          ),
-                        )),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ],
 
-          // Критические узлы
           if (controller.topRisks.isNotEmpty) ...[
             const SizedBox(height: 12),
             Card(
               elevation: 3,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -151,20 +200,33 @@ class ResultDashboard extends StatelessWidget {
                       children: const [
                         Icon(Icons.dangerous, color: Colors.red, size: 24),
                         SizedBox(width: 8),
-                        Text("Критические узлы", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text(
+                          "Критические узлы",
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ...controller.topRisks.map((risk) {
-                      double maxImpact = controller.topRisks.first.impactDays;
-                      double fraction = maxImpact > 0 ? risk.impactDays / maxImpact : 0;
+                    ...controller.topRisks.map((RiskImpact risk) {
+                      final maxImpact =
+                          controller.topRisks.first.impactDays;
+                      final fraction =
+                          maxImpact > 0 ? risk.impactDays / maxImpact : 0.0;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("${risk.taskName} (Угроза: +${risk.impactDays.toStringAsFixed(1)} дн.)",
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                            Text(
+                              "${risk.taskName} (Угроза: +${risk.impactDays.toStringAsFixed(1)} дн.)",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             const SizedBox(height: 4),
                             LinearProgressIndicator(
                               value: fraction,
@@ -183,9 +245,11 @@ class ResultDashboard extends StatelessWidget {
             ),
           ],
 
-          // Диаграмма Ганта
           const SizedBox(height: 16),
-          const Text("Диаграмма Ганта", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            "Диаграмма Ганта",
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           GanttChart(
             data: controller.ganttData,
@@ -213,8 +277,13 @@ class ResultDashboard extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-            width: 16, height: 16,
-            decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(4))),
+          width: 16,
+          height: 16,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ),
         const SizedBox(width: 4),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],

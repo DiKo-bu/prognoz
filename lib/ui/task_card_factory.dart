@@ -45,7 +45,7 @@ class TaskCardFactory {
       clearCuttingVolume: task.clearCuttingVolume,
       clearingArea: task.clearingArea,
       clearingVolume: task.clearingVolume,
-      panelsQuantity: task.panelsQuantity ?? 0,
+      panelsQuantity: (task.panelsQuantity ?? 0).toDouble(),
       location: task.location,
       quarter: task.quarter?.toString(),
       allotment: task.allotment?.toString(),

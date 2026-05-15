@@ -20,6 +20,7 @@ class MonteCarloEngine {
 
     void process(SimulationTask task) {
       if (endTimes.containsKey(task.id)) return;
+
       double startTime = 0;
       for (int depId in task.dependsOn) {
         var depTask = tasks.firstWhere((t) => t.id == depId, orElse: () => task);
@@ -28,7 +29,11 @@ class MonteCarloEngine {
           startTime = max(startTime, endTimes[depTask.id]!);
         }
       }
-      double duration = task.isCompleted ? (task.actualDuration ?? task.likely) : task.getSample(rnd);
+
+      double duration = task.isCompleted
+          ? (task.actualDuration ?? task.likely)
+          : task.getSample(rnd);
+
       double endTime = startTime + duration;
       endTimes[task.id] = endTime;
       totalMax = max(totalMax, endTime);
@@ -38,12 +43,13 @@ class MonteCarloEngine {
     return totalMax;
   }
 
-  static Map<int, GanttTaskData> calculateBaselinePlan(List<SimulationTask> tasks) {
+  static Map<String, GanttTaskData> calculateBaselinePlan(List<SimulationTask> tasks) {
     Map<int, double> endTimes = {};
-    Map<int, GanttTaskData> taskData = {};
+    Map<String, GanttTaskData> taskData = {};
 
     void process(SimulationTask task) {
       if (endTimes.containsKey(task.id)) return;
+
       double startTime = 0;
       for (int depId in task.dependsOn) {
         var depTask = tasks.firstWhere((t) => t.id == depId, orElse: () => task);
@@ -52,15 +58,21 @@ class MonteCarloEngine {
           startTime = max(startTime, endTimes[depTask.id]!);
         }
       }
-      double duration = task.isCompleted ? (task.actualDuration ?? task.likely) : task.likely;
+
+      double duration = task.isCompleted
+          ? (task.actualDuration ?? task.likely)
+          : task.likely;
+
       double endTime = startTime + duration;
       endTimes[task.id] = endTime;
-      taskData[task.id] = GanttTaskData(
+
+      taskData[task.id.toString()] = GanttTaskData(
         taskId: task.id.toString(),
         name: task.name,
         startTime: startTime,
         endTime: endTime,
         isCompleted: task.isCompleted,
+        isOverMax: task.actualDuration != null && task.actualDuration! > task.max,
       );
     }
 
@@ -71,13 +83,18 @@ class MonteCarloEngine {
   static List<RiskImpact> calculateRisks(List<SimulationTask> tasks) {
     double baseline = calculate(tasks, iterations: 100);
     List<RiskImpact> risks = [];
+
     for (var t in tasks.where((task) => !task.isCompleted)) {
       double originalLikely = t.likely;
-      t.likely = t.max; // Симулируем худший сценарий для задачи
+      t.likely = t.max;
       double impact = calculate(tasks, iterations: 100) - baseline;
       t.likely = originalLikely;
-      if (impact > 0) risks.add(RiskImpact(taskName: t.name, impactDays: impact));
+
+      if (impact > 0) {
+        risks.add(RiskImpact(taskName: t.name, impactDays: impact));
+      }
     }
+
     risks.sort((a, b) => b.impactDays.compareTo(a.impactDays));
     return risks;
   }

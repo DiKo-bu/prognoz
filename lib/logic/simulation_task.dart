@@ -1,5 +1,7 @@
+import 'dart:math';
+
 class SimulationTask {
-  int id;
+  int id; // ID в модели всегда int
   String name;
   double min;
   double likely;
@@ -56,6 +58,17 @@ class SimulationTask {
     this.quarter,
     this.allotment,
   });
+
+  // Метод для генерации случайного значения (Треугольное распределение)
+  double getSample(Random rnd) {
+    double u = rnd.nextDouble();
+    double f = (likely - min) / (max - min);
+    if (u <= f) {
+      return min + sqrt(u * (max - min) * (likely - min));
+    } else {
+      return max - sqrt((1 - u) * (max - min) * (max - likely));
+    }
+  }
 
   factory SimulationTask.fromJson(Map<String, dynamic> json) {
     return SimulationTask(

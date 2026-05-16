@@ -19,7 +19,7 @@ class ExecutorDrawer extends StatelessWidget {
             child: Text("Настройки", style: TextStyle(color: Colors.white)),
           ),
 
-          // 🔥 ВЫБОР ИСПОЛНИТЕЛЯ
+          // ВЫБОР ИСПОЛНИТЕЛЯ
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -59,7 +59,7 @@ class ExecutorDrawer extends StatelessWidget {
 
           const Divider(),
 
-          // 🔥 Адрес сервера
+          // АДРЕС СЕРВЕРА
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -73,7 +73,9 @@ class ExecutorDrawer extends StatelessWidget {
                     hintText: "https://example.com",
                     border: OutlineInputBorder(),
                   ),
-                  onSubmitted: (value) {
+
+                  // 🔥 ВАЖНО: сохраняем при каждом изменении
+                  onChanged: (value) {
                     controller.setServerUrl(value);
                   },
                 ),

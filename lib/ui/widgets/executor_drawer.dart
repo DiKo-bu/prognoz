@@ -19,7 +19,47 @@ class ExecutorDrawer extends StatelessWidget {
             child: Text("Настройки", style: TextStyle(color: Colors.white)),
           ),
 
-          // 🔥 Поле ввода адреса сервера
+          // 🔥 ВЫБОР ИСПОЛНИТЕЛЯ
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Исполнитель:", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                DropdownButton<String>(
+                  value: controller.currentExecutor.isEmpty
+                      ? null
+                      : controller.currentExecutor,
+                  isExpanded: true,
+                  hint: const Text("Выберите исполнителя"),
+                  items: controller.executors
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) {
+                    if (v != null) {
+                      controller.currentExecutor = v;
+                      controller.loadData();
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  decoration: const InputDecoration(
+                    hintText: "Новый исполнитель",
+                    border: OutlineInputBorder(),
+                  ),
+                  onSubmitted: (value) {
+                    controller.createNewExecutor(value);
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(),
+
+          // 🔥 Адрес сервера
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
